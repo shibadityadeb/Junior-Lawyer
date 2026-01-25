@@ -1,18 +1,20 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { useAuth } from '@clerk/clerk-react'
+import { loadConversations, saveConversations } from '@/utils/chatStorage'
 
 export interface Message {
   id: string
   role: 'user' | 'assistant'
   content: string
-  timestamp: Date
+  timestamp: number // milliseconds since epoch
 }
 
 export interface Conversation {
   id: string
   title: string
   messages: Message[]
-  createdAt: Date
-  updatedAt: Date
+  createdAt: number // milliseconds since epoch
+  updatedAt: number // milliseconds since epoch
 }
 
 interface ChatContextType {
@@ -27,56 +29,67 @@ interface ChatContextType {
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined)
 
-const STORAGE_KEY = 'askjunior_conversations'
-
 function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).substr(2)
 }
 
 export function ChatProvider({ children }: { children: ReactNode }) {
+  const { userId, isLoaded } = useAuth()
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null)
 
-  // Load conversations from localStorage on mount
+  // Load conversations from storage when userId changes or auth loads
+  // With 10-day retention filtering
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored)
-        const restoredConversations = parsed.conversations.map((conv: any) => ({
-          ...conv,
-          createdAt: new Date(conv.createdAt),
-          updatedAt: new Date(conv.updatedAt),
-          messages: conv.messages.map((msg: any) => ({
-            ...msg,
-            timestamp: new Date(msg.timestamp)
-          }))
-        }))
-        setConversations(restoredConversations)
-        setActiveConversationId(parsed.activeConversationId)
-      } catch (error) {
-        console.error('Failed to load conversations:', error)
-      }
-    }
-  }, [])
+    // Only load when auth is fully loaded
+    if (!isLoaded) return
 
-  // Save conversations to localStorage whenever they change
+    // Clear state if user logs out
+    if (!userId) {
+      setConversations([])
+      setActiveConversationId(null)
+      return
+    }
+
+    // Load conversations with retention filtering
+    const data = loadConversations(userId)
+    
+    // Convert stored timestamps (milliseconds) back to numbers for state
+    const restoredConversations = data.conversations.map((conv: any) => ({
+      ...conv,
+      createdAt: typeof conv.createdAt === 'number' ? conv.createdAt : new Date(conv.createdAt).getTime(),
+      updatedAt: typeof conv.updatedAt === 'number' ? conv.updatedAt : new Date(conv.updatedAt).getTime(),
+      messages: conv.messages.map((msg: any) => ({
+        ...msg,
+        timestamp: typeof msg.timestamp === 'number' ? msg.timestamp : new Date(msg.timestamp).getTime()
+      }))
+    }))
+    
+    setConversations(restoredConversations)
+    setActiveConversationId(data.activeConversationId)
+  }, [userId, isLoaded])
+
+  // Save conversations to storage whenever they change
+  // Only save if user is authenticated
   useEffect(() => {
+    if (!userId || !isLoaded) return
+
     if (conversations.length > 0 || activeConversationId) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      saveConversations(userId, {
         conversations,
         activeConversationId
-      }))
+      })
     }
-  }, [conversations, activeConversationId])
+  }, [conversations, activeConversationId, userId, isLoaded])
 
   const createNewChat = () => {
+    const now = Date.now()
     const newConversation: Conversation = {
       id: generateId(),
       title: 'New chat',
       messages: [],
-      createdAt: new Date(),
-      updatedAt: new Date()
+      createdAt: now,
+      updatedAt: now
     }
 
     setConversations(prev => [newConversation, ...prev])
@@ -92,7 +105,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
     const newMessage: Message = {
       id: generateId(),
-      timestamp: new Date(),
+      timestamp: Date.now(),
       ...message
     }
 
@@ -101,7 +114,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         const updatedConv = {
           ...conv,
           messages: [...conv.messages, newMessage],
-          updatedAt: new Date()
+          updatedAt: Date.now() // Update the conversation's updatedAt timestamp
         }
 
         // Auto-generate title from first user message
@@ -119,7 +132,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const updateChatTitle = (conversationId: string, title: string) => {
     setConversations(prev => prev.map(conv => 
       conv.id === conversationId 
-        ? { ...conv, title, updatedAt: new Date() }
+        ? { ...conv, title, updatedAt: Date.now() }
         : conv
     ))
   }

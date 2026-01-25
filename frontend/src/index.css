@@ -37,6 +37,18 @@
   }
 }
 
+/* Line-by-line block reveal animation (ChatGPT-style) */
+@keyframes blockReveal {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @layer utilities {
   .text-accent {
     @apply text-orange-500;
@@ -52,5 +64,19 @@
   
   .glass-subtle {
     @apply bg-white/5 backdrop-blur-sm border border-white/10;
+  }
+  
+  /* Block reveal utility classes */
+  .block-reveal {
+    animation: blockReveal 150ms ease-out forwards;
+  }
+  
+  /* For reduced motion preference */
+  @media (prefers-reduced-motion: reduce) {
+    .block-reveal {
+      animation: none;
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 }

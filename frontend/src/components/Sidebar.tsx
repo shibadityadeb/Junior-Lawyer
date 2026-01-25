@@ -1,11 +1,11 @@
 import { useState } from 'react'
-import { useAuth } from '@clerk/clerk-react'
+import { useUser } from '@clerk/clerk-react'
 import { Plus, Search, MessageCircle, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useChat } from '@/context/ChatContext'
 
 export function Sidebar() {
-  const { user } = useAuth()
+  const { user } = useUser()
   const [searchQuery, setSearchQuery] = useState('')
   const { conversations, activeConversationId, createNewChat, switchToChat } = useChat()
 
@@ -13,9 +13,9 @@ export function Sidebar() {
     conv.title.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  const formatTimestamp = (date: Date) => {
-    const now = new Date()
-    const diffMs = now.getTime() - date.getTime()
+  const formatTimestamp = (timestampMs: number) => {
+    const now = Date.now()
+    const diffMs = now - timestampMs
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
     const diffDays = Math.floor(diffHours / 24)
     

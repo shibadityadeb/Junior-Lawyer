@@ -1,17 +1,16 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
-import { Button } from '@/components/ui/button'
-import { MessageCircle, Plus, Mic, Send, Loader, FileText, X, Image, Paperclip } from 'lucide-react'
+import { MessageCircle, Plus, Loader, Send, FileText, X, Image, Paperclip, Mic, ArrowLeft } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { api, setAuthToken } from '@/services/api'
 import { Sidebar } from '@/components/Sidebar'
+import { ChatMessage } from '@/components/ChatMessage'
 import { useChat } from '@/context/ChatContext'
 
-type AIMode = 'chat' | 'research' | 'document'
-
 export function AIZonePage() {
+  const navigate = useNavigate()
   const { getToken } = useAuth()
-  const [activeMode, setActiveMode] = useState<AIMode>('chat')
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -19,24 +18,6 @@ export function AIZonePage() {
   const [attachedFiles, setAttachedFiles] = useState<string[]>([])
   
   const { activeConversation, addMessage, createNewChat } = useChat()
-
-  const modes = [
-    {
-      id: 'chat' as AIMode,
-      name: 'Legal Chat',
-      placeholder: 'Ask a legal question…'
-    },
-    {
-      id: 'research' as AIMode,
-      name: 'Legal Research',
-      placeholder: 'Research a law, section, or case…'
-    },
-    {
-      id: 'document' as AIMode,
-      name: 'Document Analysis',
-      placeholder: 'Upload a legal document and ask questions…'
-    }
-  ]
 
   const addFile = (fileName: string) => {
     if (attachedFiles.length < 2) {
@@ -48,12 +29,10 @@ export function AIZonePage() {
     setAttachedFiles(attachedFiles.filter((_, i) => i !== index))
   }
 
-  // Create initial chat if none exists
+  // Always create a new chat when the page loads
   useEffect(() => {
-    if (!activeConversation) {
-      createNewChat()
-    }
-  }, [activeConversation, createNewChat])
+    createNewChat()
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -85,9 +64,18 @@ export function AIZonePage() {
       // Call API
       const res = await api.ai.chat(userMessage)
       
-      // Add assistant response
-      const aiResponse = res.data.data?.aiResponse || res.data
-      const responseContent = aiResponse?.summary || aiResponse?.message || 'Response received'
+      // Extract the full AI response object (includes summary, steps, flowchart, etc.)
+      const aiResponseData = res.data.data?.aiResponse || {}
+      
+      // Include user message for context-aware rendering (incident type detection)
+      const enrichedResponseData = {
+        ...aiResponseData,
+        userMessage: userMessage
+      }
+      
+      // Store the complete response as JSON string so ChatMessage can parse and render it
+      const responseContent = JSON.stringify(enrichedResponseData)
+      
       addMessage({
         role: 'assistant',
         content: responseContent
@@ -102,15 +90,27 @@ export function AIZonePage() {
   }
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+    <div className="flex h-screen w-screen overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
       {/* Left Sidebar */}
       <Sidebar />
       
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Back Button */}
+        <div className="shrink-0 border-b border-slate-800/50 bg-slate-950/80 backdrop-blur-sm">
+          <button
+            onClick={() => navigate('/')}
+            className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors px-6 py-3 hover:bg-slate-900/50"
+            title="Back to home"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span className="text-sm font-medium">Back to Home</span>
+          </button>
+        </div>
+        
         {/* Top Bar */}
-        <header className="border-b border-slate-800/50 bg-slate-950/80 backdrop-blur-sm">
-          <div className="max-w-4xl mx-auto px-6 py-4">
+        <header className="border-b border-slate-800/50 bg-slate-950/80 backdrop-blur-sm shrink-0">
+          <div className="max-w-4xl mx-auto px-6 py-6">
             <div className="text-center">
               <h1 className="text-2xl font-semibold text-white mb-1">
                 AI Zone
@@ -123,11 +123,11 @@ export function AIZonePage() {
         </header>
 
         {/* Main Content */}
-        <main className="flex-1 flex flex-col">
-          <div className="max-w-3xl mx-auto w-full px-6 py-8 flex-1 flex flex-col">
+        <main className="flex-1 flex flex-col overflow-hidden">
+          <div className="max-w-3xl mx-auto w-full px-6 py-8 flex-1 flex flex-col overflow-hidden">
             
-            {/* Chat Area */}
-            <div className="flex-1 mb-8">
+            {/* Chat Area - Scrollable */}
+            <div className="flex-1 overflow-y-auto mb-8">
               {!activeConversation?.messages.length ? (
                 <div className="flex items-center justify-center h-full min-h-[300px]">
                   <div className="text-center max-w-md">
@@ -143,17 +143,13 @@ export function AIZonePage() {
                   </div>
                 </div>
               ) : (
-                <div className="space-y-6">
+                <div className="space-y-4">
                   {activeConversation.messages.map((message) => (
-                    <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`rounded-2xl px-4 py-3 max-w-[80%] ${
-                        message.role === 'user' 
-                          ? 'bg-orange-500 text-white' 
-                          : 'bg-slate-800 text-white'
-                      }`}>
-                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                      </div>
-                    </div>
+                    <ChatMessage
+                      key={message.id}
+                      role={message.role}
+                      content={message.content}
+                    />
                   ))}
                   
                   {loading && (
@@ -161,7 +157,7 @@ export function AIZonePage() {
                       <div className="bg-slate-800 text-white rounded-2xl px-4 py-3">
                         <div className="flex items-center space-x-2">
                           <Loader className="w-4 h-4 animate-spin" />
-                          <span className="text-sm">Thinking...</span>
+                          <span className="text-sm">Processing your question...</span>
                         </div>
                       </div>
                     </div>
@@ -170,8 +166,8 @@ export function AIZonePage() {
               )}
             </div>
 
-            {/* ChatGPT-Style Input Composer */}
-            <div className="relative">
+            {/* ChatGPT-Style Input Composer - Pinned at bottom */}
+            <div className="relative mt-auto shrink-0">
               {/* Main Input Panel */}
               <div className="relative">
                 {/* Input Container */}
@@ -325,8 +321,8 @@ export function AIZonePage() {
           </div>
         </main>
 
-        {/* Footer Disclaimer */}
-        <footer className="border-t border-slate-800/50 bg-slate-950/80 backdrop-blur-sm">
+        {/* Footer Disclaimer - Pinned at bottom */}
+        <footer className="border-t border-slate-800/50 bg-slate-950/80 backdrop-blur-sm shrink-0">
           <div className="max-w-3xl mx-auto px-6 py-4">
             <p className="text-xs text-slate-500 text-center">
               AI provides general legal information only. Not legal advice. Consult qualified legal professionals for specific matters.
