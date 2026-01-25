@@ -4,7 +4,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 35000, // 35 seconds to allow Claude API time to respond
   headers: {
     'Content-Type': 'application/json',
   },

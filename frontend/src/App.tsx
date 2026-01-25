@@ -4,6 +4,7 @@ import { LandingPage } from '@/pages/LandingPage'
 import { AIZonePage } from '@/pages/AIZonePage'
 import { AppShell } from '@/components/AppShell'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
+import { ChatProvider } from '@/context/ChatContext'
 
 const publishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
@@ -46,7 +47,9 @@ function App() {
             path="/ai" 
             element={
               <ProtectedRoute>
-                <AIZonePage />
+                <ChatProvider>
+                  <AIZonePage />
+                </ChatProvider>
               </ProtectedRoute>
             } 
           />

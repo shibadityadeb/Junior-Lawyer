@@ -1,218 +1,339 @@
-import { useState } from 'react'
-import { Navbar } from '@/components/Navbar'
-import { Footer } from '@/components/Footer'
+import { useState, useEffect } from 'react'
+import { useAuth } from '@clerk/clerk-react'
 import { Button } from '@/components/ui/button'
-import { MessageCircle, Search, FileText, Upload, Send } from 'lucide-react'
+import { MessageCircle, Plus, Mic, Send, Loader, FileText, X, Image, Paperclip } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { api, setAuthToken } from '@/services/api'
+import { Sidebar } from '@/components/Sidebar'
+import { useChat } from '@/context/ChatContext'
 
 type AIMode = 'chat' | 'research' | 'document'
 
 export function AIZonePage() {
+  const { getToken } = useAuth()
   const [activeMode, setActiveMode] = useState<AIMode>('chat')
   const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [showSidebar, setShowSidebar] = useState(false)
+  const [attachedFiles, setAttachedFiles] = useState<string[]>([])
+  
+  const { activeConversation, addMessage, createNewChat } = useChat()
 
   const modes = [
     {
       id: 'chat' as AIMode,
       name: 'Legal Chat',
-      icon: MessageCircle,
-      placeholder: 'Ask a legal question…',
-      description: 'Get answers to legal questions and general guidance'
+      placeholder: 'Ask a legal question…'
     },
     {
       id: 'research' as AIMode,
       name: 'Legal Research',
-      icon: Search,
-      placeholder: 'Research a law, case, or concept…',
-      description: 'Deep dive into legal precedents, statutes, and case law'
+      placeholder: 'Research a law, section, or case…'
     },
     {
       id: 'document' as AIMode,
       name: 'Document Analysis',
-      icon: FileText,
-      placeholder: 'Upload a legal document to analyze…',
-      description: 'Analyze contracts, judgments, and legal documents'
+      placeholder: 'Upload a legal document and ask questions…'
     }
   ]
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const addFile = (fileName: string) => {
+    if (attachedFiles.length < 2) {
+      setAttachedFiles([...attachedFiles, fileName])
+    }
+  }
+
+  const removeFile = (index: number) => {
+    setAttachedFiles(attachedFiles.filter((_, i) => i !== index))
+  }
+
+  // Create initial chat if none exists
+  useEffect(() => {
+    if (!activeConversation) {
+      createNewChat()
+    }
+  }, [activeConversation, createNewChat])
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // TODO: Implement AI chat functionality
-    console.log('Submitting:', { mode: activeMode, input })
+    
+    if (!input.trim() || !activeConversation) {
+      setError('Please enter a message')
+      return
+    }
+
+    const userMessage = input.trim()
+    setInput('')
+    setError(null)
+    
+    // Add user message immediately
+    addMessage({
+      role: 'user',
+      content: userMessage
+    })
+
+    try {
+      setLoading(true)
+      
+      // Get Clerk token and set it on API client
+      const token = await getToken()
+      if (token) {
+        setAuthToken(token)
+      }
+
+      // Call API
+      const res = await api.ai.chat(userMessage)
+      
+      // Add assistant response
+      const aiResponse = res.data.data?.aiResponse || res.data
+      const responseContent = aiResponse?.summary || aiResponse?.message || 'Response received'
+      addMessage({
+        role: 'assistant',
+        content: responseContent
+      })
+      
+    } catch (err: any) {
+      console.error('Error:', err)
+      setError(err.response?.data?.message || 'Failed to send message')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
-    <div className="min-h-screen bg-slate-950">
-      <Navbar />
+    <div className="flex h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+      {/* Left Sidebar */}
+      <Sidebar />
       
-      <main className="pt-24 pb-16">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold text-white mb-4">
-              AI Zone
-            </h1>
-            <p className="text-xl text-slate-300">
-              Legal assistance, research, and document analysis powered by AI
-            </p>
-          </div>
-
-          {/* Mode Selector */}
-          <div className="mb-8">
-            <div className="flex flex-col sm:flex-row gap-2 p-1 bg-slate-900 rounded-lg border border-slate-800">
-              {modes.map((mode) => {
-                const Icon = mode.icon
-                return (
-                  <button
-                    key={mode.id}
-                    onClick={() => setActiveMode(mode.id)}
-                    className={cn(
-                      "flex-1 flex items-center justify-center space-x-2 px-4 py-3 rounded-md transition-colors font-medium text-sm",
-                      activeMode === mode.id
-                        ? "bg-orange-500 text-white"
-                        : "text-slate-300 hover:text-white hover:bg-slate-800"
-                    )}
-                  >
-                    <Icon className="w-4 h-4" />
-                    <span>{mode.name}</span>
-                  </button>
-                )
-              })}
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col">
+        {/* Top Bar */}
+        <header className="border-b border-slate-800/50 bg-slate-950/80 backdrop-blur-sm">
+          <div className="max-w-4xl mx-auto px-6 py-4">
+            <div className="text-center">
+              <h1 className="text-2xl font-semibold text-white mb-1">
+                AI Zone
+              </h1>
+              <p className="text-sm text-slate-400">
+                Legal research and document analysis
+              </p>
             </div>
           </div>
+        </header>
 
-          {/* Mode Description */}
-          <div className="mb-8 text-center">
-            <p className="text-slate-400">
-              {modes.find(m => m.id === activeMode)?.description}
-            </p>
-          </div>
-
-          {/* Main Input Area */}
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-8">
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="relative">
-                <textarea
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder={modes.find(m => m.id === activeMode)?.placeholder}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
-                  rows={4}
-                />
-              </div>
-
-              {/* Document Upload Area (only for document mode) */}
-              {activeMode === 'document' && (
-                <div className="border-2 border-dashed border-slate-700 rounded-lg p-8 text-center hover:border-slate-600 transition-colors">
-                  <Upload className="w-8 h-8 text-slate-500 mx-auto mb-3" />
-                  <p className="text-slate-400 mb-2">
-                    Drop your legal document here, or click to browse
-                  </p>
-                  <p className="text-sm text-slate-500">
-                    Supports PDF, DOC, DOCX files up to 10MB
-                  </p>
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    className="mt-4 border-slate-600 text-slate-300 hover:bg-slate-800"
-                  >
-                    Choose File
-                  </Button>
+        {/* Main Content */}
+        <main className="flex-1 flex flex-col">
+          <div className="max-w-3xl mx-auto w-full px-6 py-8 flex-1 flex flex-col">
+            
+            {/* Chat Area */}
+            <div className="flex-1 mb-8">
+              {!activeConversation?.messages.length ? (
+                <div className="flex items-center justify-center h-full min-h-[300px]">
+                  <div className="text-center max-w-md">
+                    <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <MessageCircle className="w-8 h-8 text-slate-400" />
+                    </div>
+                    <h3 className="text-lg font-medium text-white mb-2">
+                      How can I help with your legal questions?
+                    </h3>
+                    <p className="text-slate-400 text-sm">
+                      Start a conversation with your legal AI assistant
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {activeConversation.messages.map((message) => (
+                    <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`rounded-2xl px-4 py-3 max-w-[80%] ${
+                        message.role === 'user' 
+                          ? 'bg-orange-500 text-white' 
+                          : 'bg-slate-800 text-white'
+                      }`}>
+                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {loading && (
+                    <div className="flex justify-start">
+                      <div className="bg-slate-800 text-white rounded-2xl px-4 py-3">
+                        <div className="flex items-center space-x-2">
+                          <Loader className="w-4 h-4 animate-spin" />
+                          <span className="text-sm">Thinking...</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
+            </div>
 
-              <div className="flex justify-between items-center">
-                <div className="text-sm text-slate-500">
-                  {activeMode === 'chat' && 'Ask anything about law, legal procedures, or get general guidance'}
-                  {activeMode === 'research' && 'Research specific laws, cases, precedents, or legal concepts'}
-                  {activeMode === 'document' && 'Upload documents for AI-powered analysis and insights'}
+            {/* ChatGPT-Style Input Composer */}
+            <div className="relative">
+              {/* Main Input Panel */}
+              <div className="relative">
+                {/* Input Container */}
+                <div className="bg-slate-800 border border-slate-700 rounded-2xl shadow-lg focus-within:border-orange-500 transition-all duration-200">
+                  {/* Main Input Area */}
+                  <form onSubmit={handleSubmit} className="relative">
+                    <div className="flex items-end p-3 space-x-3">
+                      {/* Left Controls */}
+                      <div className="relative flex items-center space-x-2">
+                        <button
+                          type="button"
+                          onClick={() => setShowSidebar(!showSidebar)}
+                          className={cn(
+                            "w-8 h-8 rounded-full flex items-center justify-center transition-colors border",
+                            showSidebar 
+                              ? "bg-orange-500 text-white border-orange-500" 
+                              : "text-slate-300 hover:text-white hover:bg-slate-700 border-slate-600"
+                          )}
+                        >
+                          <Plus className="w-4 h-4" />
+                        </button>
+                        
+                        {/* Attachment Popover Menu */}
+                        {showSidebar && (
+                          <div className="absolute bottom-full left-0 mb-2 w-64 bg-slate-700 border border-slate-600 rounded-xl shadow-xl z-50 animate-in fade-in-0 zoom-in-95 duration-150">
+                            <div className="p-2">
+                              <button
+                                onClick={() => {
+                                  addFile(`Photo_${Date.now()}.jpg`)
+                                  setShowSidebar(false)
+                                }}
+                                className="w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-600 transition-colors text-left"
+                                role="menuitem"
+                              >
+                                <Image className="w-5 h-5 text-slate-400" />
+                                <span className="text-sm font-medium text-white">Add photos & files</span>
+                              </button>
+                              
+                              <button
+                                onClick={() => {
+                                  addFile(`Document_${Date.now()}.pdf`)
+                                  setShowSidebar(false)
+                                }}
+                                className="w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-600 transition-colors text-left"
+                                role="menuitem"
+                              >
+                                <FileText className="w-5 h-5 text-slate-400" />
+                                <span className="text-sm font-medium text-white">Add documents</span>
+                              </button>
+                              
+                              <button
+                                onClick={() => {
+                                  addFile(`Image_${Date.now()}.png`)
+                                  setShowSidebar(false)
+                                }}
+                                className="w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-600 transition-colors text-left"
+                                role="menuitem"
+                              >
+                                <Paperclip className="w-5 h-5 text-slate-400" />
+                                <span className="text-sm font-medium text-white">Add images</span>
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Center Textarea */}
+                      <div className="flex-1 relative">
+                        {/* Attached Files Preview */}
+                        {attachedFiles.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mb-2">
+                            {attachedFiles.map((file, index) => (
+                              <div key={index} className="inline-flex items-center bg-slate-700 rounded-full px-2 py-1 text-xs text-slate-300">
+                                <FileText className="w-3 h-3 mr-1" />
+                                <span className="truncate max-w-20">{file.split('.')[0]}</span>
+                                <button
+                                  onClick={() => removeFile(index)}
+                                  className="ml-1 text-slate-400 hover:text-red-400"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        
+                        <textarea
+                          value={input}
+                          onChange={(e) => setInput(e.target.value)}
+                          placeholder="AskJunior — your all-time legal assistant"
+                          className="w-full bg-transparent text-white placeholder-slate-400 focus:outline-none resize-none min-h-[24px] max-h-[120px] text-sm leading-6"
+                          rows={1}
+                          disabled={loading}
+                          style={{
+                            height: 'auto',
+                            minHeight: '24px'
+                          }}
+                          onInput={(e) => {
+                            const target = e.target as HTMLTextAreaElement
+                            target.style.height = 'auto'
+                            target.style.height = Math.min(target.scrollHeight, 120) + 'px'
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault()
+                              handleSubmit(e)
+                            }
+                          }}
+                        />
+                      </div>
+
+                      {/* Right Controls */}
+                      <div className="flex items-center space-x-2">
+                        <button
+                          type="button"
+                          className="w-8 h-8 rounded-full text-slate-400 hover:text-white hover:bg-slate-700 flex items-center justify-center transition-colors"
+                        >
+                          <Mic className="w-4 h-4" />
+                        </button>
+                        
+                        <button
+                          type="submit"
+                          disabled={!input.trim() || loading}
+                          className={cn(
+                            "w-8 h-8 rounded-full flex items-center justify-center transition-colors",
+                            input.trim() && !loading
+                              ? "bg-orange-500 hover:bg-orange-600 text-white"
+                              : "bg-slate-600 text-slate-400 cursor-not-allowed"
+                          )}
+                        >
+                          {loading ? (
+                            <Loader className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Send className="w-4 h-4" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </form>
                 </div>
-                <Button 
-                  type="submit" 
-                  disabled={!input.trim() && activeMode !== 'document'}
-                  className="bg-orange-500 hover:bg-orange-600 text-white"
-                >
-                  <Send className="w-4 h-4 mr-2" />
-                  {activeMode === 'document' ? 'Analyze' : 'Send'}
-                </Button>
               </div>
-            </form>
-          </div>
 
-          {/* Sample Prompts */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
-              <h3 className="font-semibold text-white mb-3">Sample Questions</h3>
-              <div className="space-y-2">
-                {activeMode === 'chat' && (
-                  <>
-                    <button className="block w-full text-left text-sm text-slate-300 hover:text-white p-2 rounded hover:bg-slate-800 transition-colors">
-                      "What are my rights during a police interrogation?"
-                    </button>
-                    <button className="block w-full text-left text-sm text-slate-300 hover:text-white p-2 rounded hover:bg-slate-800 transition-colors">
-                      "How do I file a consumer complaint?"
-                    </button>
-                    <button className="block w-full text-left text-sm text-slate-300 hover:text-white p-2 rounded hover:bg-slate-800 transition-colors">
-                      "What is the process for property registration?"
-                    </button>
-                  </>
-                )}
-                {activeMode === 'research' && (
-                  <>
-                    <button className="block w-full text-left text-sm text-slate-300 hover:text-white p-2 rounded hover:bg-slate-800 transition-colors">
-                      "Research Section 498A of IPC"
-                    </button>
-                    <button className="block w-full text-left text-sm text-slate-300 hover:text-white p-2 rounded hover:bg-slate-800 transition-colors">
-                      "Find cases related to digital evidence admissibility"
-                    </button>
-                    <button className="block w-full text-left text-sm text-slate-300 hover:text-white p-2 rounded hover:bg-slate-800 transition-colors">
-                      "Analyze Consumer Protection Act 2019"
-                    </button>
-                  </>
-                )}
-                {activeMode === 'document' && (
-                  <>
-                    <button className="block w-full text-left text-sm text-slate-300 hover:text-white p-2 rounded hover:bg-slate-800 transition-colors">
-                      "Analyze employment contract terms"
-                    </button>
-                    <button className="block w-full text-left text-sm text-slate-300 hover:text-white p-2 rounded hover:bg-slate-800 transition-colors">
-                      "Review rental agreement clauses"
-                    </button>
-                    <button className="block w-full text-left text-sm text-slate-300 hover:text-white p-2 rounded hover:bg-slate-800 transition-colors">
-                      "Extract key points from court judgment"
-                    </button>
-                  </>
-                )}
-              </div>
+              {/* Error Display */}
+              {error && (
+                <div className="mt-3 bg-red-900/20 border border-red-800/30 rounded-lg p-3">
+                  <p className="text-red-300 text-sm">{error}</p>
+                </div>
+              )}
             </div>
 
-            <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
-              <h3 className="font-semibold text-white mb-3">Quick Tips</h3>
-              <ul className="space-y-2 text-sm text-slate-300">
-                <li>• Be specific with your questions for better results</li>
-                <li>• Include relevant context and jurisdiction</li>
-                <li>• For documents, ensure text is clear and readable</li>
-                <li>• Always verify AI responses with legal professionals</li>
-              </ul>
-            </div>
           </div>
+        </main>
 
-          {/* Disclaimer */}
-          <div className="mt-8 bg-amber-50 border border-amber-200 rounded-lg p-4">
-            <div className="flex items-start space-x-3">
-              <MessageCircle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
-              <div>
-                <h4 className="font-semibold text-amber-900 mb-1">AI Assistant Disclaimer</h4>
-                <p className="text-amber-800 text-sm">
-                  This AI provides information for research purposes only and does not constitute legal advice. 
-                  Always consult qualified legal professionals for specific legal matters.
-                </p>
-              </div>
-            </div>
+        {/* Footer Disclaimer */}
+        <footer className="border-t border-slate-800/50 bg-slate-950/80 backdrop-blur-sm">
+          <div className="max-w-3xl mx-auto px-6 py-4">
+            <p className="text-xs text-slate-500 text-center">
+              AI provides general legal information only. Not legal advice. Consult qualified legal professionals for specific matters.
+            </p>
           </div>
-        </div>
-      </main>
-
-      <Footer />
+        </footer>
+      </div>
     </div>
   )
 }

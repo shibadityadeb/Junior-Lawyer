@@ -9,9 +9,16 @@ const app: Express = express();
 // Global Middleware
 // ========================
 
-// Body parser middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Body parser middleware with increased limits
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Request timeout: 45 seconds for Claude API calls
+app.use((req: Request, res: Response, next: NextFunction) => {
+  req.setTimeout(45000);
+  res.setTimeout(45000);
+  next();
+});
 
 // Request logging middleware (basic)
 app.use((req: Request, res: Response, next: NextFunction) => {
