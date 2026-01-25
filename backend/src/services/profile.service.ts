@@ -1,4 +1,4 @@
-import { supabase } from '../config/supabase';
+import { supabaseAdmin } from '../config/supabase';
 
 export interface UserProfile {
   id: string;
@@ -26,12 +26,13 @@ export interface UpdateProfileData {
 /**
  * Create a new user profile
  * Called after user is created in Supabase Auth
+ * Uses admin client to bypass RLS policies
  */
 export const createProfile = async (
   data: CreateProfileData
 ): Promise<UserProfile | null> => {
   try {
-    const { data: profile, error } = await supabase
+    const { data: profile, error } = await supabaseAdmin
       .from('profiles')
       .insert({
         id: data.id,
@@ -60,7 +61,7 @@ export const createProfile = async (
  */
 export const getProfileById = async (userId: string): Promise<UserProfile | null> => {
   try {
-    const { data: profile, error } = await supabase
+    const { data: profile, error } = await supabaseAdmin
       .from('profiles')
       .select('*')
       .eq('id', userId)
@@ -98,7 +99,7 @@ export const updateProfile = async (
     if (data.age !== undefined) updateData.age = data.age;
     if (data.gender !== undefined) updateData.gender = data.gender;
 
-    const { data: profile, error } = await supabase
+    const { data: profile, error } = await supabaseAdmin
       .from('profiles')
       .update(updateData)
       .eq('id', userId)
@@ -134,7 +135,7 @@ export const createGoogleProfile = async (
     }
 
     // Create profile with defaults for Google users
-    const { data: profile, error } = await supabase
+    const { data: profile, error } = await supabaseAdmin
       .from('profiles')
       .insert({
         id: userId,
@@ -163,7 +164,7 @@ export const createGoogleProfile = async (
  */
 export const deleteProfile = async (userId: string): Promise<void> => {
   try {
-    const { error } = await supabase.from('profiles').delete().eq('id', userId);
+    const { error } = await supabaseAdmin.from('profiles').delete().eq('id', userId);
 
     if (error) {
       console.error('Error deleting profile:', error);
