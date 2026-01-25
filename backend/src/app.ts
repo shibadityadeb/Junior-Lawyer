@@ -3,6 +3,8 @@ import sosRoutes from './routes/sos.routes';
 import categoriesRoutes from './routes/categories.routes';
 import newsRoutes from './routes/news.routes';
 import aiRoutes from './routes/ai.routes';
+import authRoutes from './routes/auth.routes';
+import { authMiddleware } from './middlewares/auth.middleware';
 
 const app: Express = express();
 
@@ -37,10 +39,16 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 // Feature Routes
 // ========================
 
+// Public auth routes
+app.use('/api/auth', authRoutes);
+
+// Public routes (no authentication required)
 app.use('/api/sos', sosRoutes);
 app.use('/api/categories', categoriesRoutes);
 app.use('/api/news', newsRoutes);
-app.use('/api/ai', aiRoutes);
+
+// Protected routes (authentication required)
+app.use('/api/ai', authMiddleware, aiRoutes);
 
 // ========================
 // Health Check Endpoint
