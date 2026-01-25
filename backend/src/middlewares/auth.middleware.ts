@@ -1,11 +1,20 @@
-import { Response, NextFunction } from 'express';
-import { AuthenticatedRequest } from '../types/auth';
-import { supabase } from '../config/supabase';
+import { Response, NextFunction, Request } from 'express';
+import { clerkClient } from '@clerk/clerk-sdk-node';
 
 /**
- * Auth middleware to verify user authentication
+ * Extended Request type with auth information
+ */
+export interface AuthenticatedRequest extends Request {
+  auth?: {
+    userId: string;
+    sessionId?: string;
+  };
+}
+
+/**
+ * Auth middleware to verify Clerk JWT token
  * Extracts and validates JWT token from Authorization header
- * Attaches user information to request object
+ * Attaches userId to request object
  */
 export const authMiddleware = async (
   req: AuthenticatedRequest,
@@ -38,11 +47,23 @@ export const authMiddleware = async (
 
     const token = parts[1];
 
-    // Verify token with Supabase
-    const { data, error } = await supabase.auth.getUser(token);
+    try {
+      // Verify token with Clerk
+      const decoded = await clerkClient.verifyToken(token);
+      
+      if (!decoded.sub) {
+        throw new Error('No user ID in token');
+      }
 
-    if (error || !data.user) {
-      console.error('Token validation error:', error);
+      // Attach user info to request
+      req.auth = {
+        userId: decoded.sub,
+        sessionId: decoded.sid,
+      };
+
+      next();
+    } catch (verifyError) {
+      console.error('Clerk token verification error:', verifyError);
       res.status(401).json({
         success: false,
         message: 'Invalid or expired token',
@@ -50,67 +71,13 @@ export const authMiddleware = async (
       });
       return;
     }
-
-    // Attach user information to request object
-    req.user = {
-      id: data.user.id,
-      email: data.user.email || '',
-      user_metadata: data.user.user_metadata,
-    };
-
-    next();
   } catch (error) {
     console.error('Auth middleware error:', error);
     res.status(500).json({
       success: false,
-      message: 'Internal server error',
+      message: 'Internal server error during authentication',
       error: 'INTERNAL_ERROR',
     });
   }
 };
 
-/**
- * Optional auth middleware
- * Does not reject requests without auth, but populates user if token is valid
- */
-export const optionalAuthMiddleware = async (
-  req: AuthenticatedRequest,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
-    const authHeader = req.headers.authorization;
-
-    // If no auth header, continue without user info
-    if (!authHeader) {
-      return next();
-    }
-
-    // Extract Bearer token
-    const parts = authHeader.split(' ');
-    if (parts.length !== 2 || parts[0].toLowerCase() !== 'bearer') {
-      // Invalid format but don't reject, just continue
-      return next();
-    }
-
-    const token = parts[1];
-
-    // Verify token with Supabase
-    const { data } = await supabase.auth.getUser(token);
-
-    // If valid, attach user info
-    if (data.user) {
-      req.user = {
-        id: data.user.id,
-        email: data.user.email || '',
-        user_metadata: data.user.user_metadata,
-      };
-    }
-
-    next();
-  } catch (error) {
-    // Log but don't reject
-    console.error('Optional auth middleware error:', error);
-    next();
-  }
-};

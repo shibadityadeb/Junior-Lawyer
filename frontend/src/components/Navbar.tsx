@@ -1,62 +1,68 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Menu, X, Scale } from 'lucide-react'
+import { UserButton, SignedIn, SignedOut, useAuth, SignInButton } from '@clerk/clerk-react'
 import { cn } from '@/lib/utils'
 
 export function Navbar() {
-  const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const location = useLocation()
+  const navigate = useNavigate()
+  const { isSignedIn } = useAuth()
 
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10)
+  const isActive = (path: string) => location.pathname === path
+
+  const handleAIZoneClick = (e: React.MouseEvent) => {
+    e.preventDefault()
+    if (isSignedIn) {
+      navigate('/ai')
+    } else {
+      // Redirect to sign in - will be handled by ProtectedRoute when navigating
+      navigate('/ai')
     }
-    window.addEventListener('scroll', handleScroll)
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
-
-  const navLinks = [
-    { name: 'Product', href: '#product' },
-    { name: 'How It Works', href: '#how-it-works' },
-    { name: 'Security', href: '#security' },
-    { name: 'Pricing', href: '#pricing' },
-  ]
+  }
 
   return (
     <nav className="fixed top-0 w-full z-50 bg-slate-950 border-b border-slate-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <div className="flex items-center space-x-3">
+          <Link to="/" className="flex items-center space-x-3">
             <Scale className="h-7 w-7 text-orange-500" />
             <span className="text-xl font-semibold text-white tracking-tight">AskJunior</span>
-          </div>
-
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
-            {navLinks.map((link) => (
-              <a
-                key={link.name}
-                href={link.href}
-                className="text-slate-300 hover:text-white transition-colors font-medium text-sm"
-              >
-                {link.name}
-              </a>
-            ))}
-          </div>
+          </Link>
 
           {/* Desktop CTA */}
           <div className="hidden md:flex items-center space-x-3">
-            <Button variant="ghost" className="text-slate-300 hover:text-white hover:bg-slate-800">
-              Sign In
-            </Button>
-            <Button className="bg-orange-500 hover:bg-orange-600 text-white font-medium">
-              Get Started
+            <SignedOut>
+              <SignInButton mode="modal">
+                <Button variant="ghost" className="text-slate-300 hover:text-white hover:bg-slate-800 cursor-pointer">
+                  Sign In
+                </Button>
+              </SignInButton>
+            </SignedOut>
+            <SignedIn>
+              <UserButton />
+            </SignedIn>
+            <Button 
+              onClick={handleAIZoneClick}
+              className={cn(
+                "font-medium cursor-pointer",
+                isActive('/ai')
+                  ? "bg-orange-600 hover:bg-orange-700"
+                  : "bg-orange-500 hover:bg-orange-600"
+              )}
+            >
+              AI Zone
             </Button>
           </div>
 
           {/* Mobile menu button */}
-          <div className="md:hidden">
+          <div className="md:hidden flex items-center space-x-2">
+            <SignedIn>
+              <UserButton />
+            </SignedIn>
             <Button
               variant="ghost"
               size="icon"
@@ -75,25 +81,25 @@ export function Navbar() {
         {/* Mobile Navigation */}
         {isMobileMenuOpen && (
           <div className="md:hidden border-t border-slate-800 bg-slate-950">
-            <div className="px-2 pt-2 pb-3 space-y-1">
-              {navLinks.map((link) => (
-                <a
-                  key={link.name}
-                  href={link.href}
-                  className="block px-3 py-2 text-slate-300 hover:text-white font-medium rounded-md hover:bg-slate-800 transition-colors"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  {link.name}
-                </a>
-              ))}
-              <div className="pt-4 space-y-2">
-                <Button variant="ghost" className="w-full justify-start text-slate-300 hover:text-white hover:bg-slate-800">
-                  Sign In
-                </Button>
-                <Button className="w-full bg-orange-500 hover:bg-orange-600 text-white">
-                  Get Started
-                </Button>
-              </div>
+            <div className="px-2 pt-2 pb-3 space-y-2">
+              <SignedOut>
+                <SignInButton mode="modal">
+                  <Button variant="ghost" className="w-full justify-start text-slate-300 hover:text-white hover:bg-slate-800 cursor-pointer">
+                    Sign In
+                  </Button>
+                </SignInButton>
+              </SignedOut>
+              <Button 
+                onClick={handleAIZoneClick}
+                className={cn(
+                  "w-full cursor-pointer",
+                  isActive('/ai')
+                    ? "bg-orange-600 hover:bg-orange-700"
+                    : "bg-orange-500 hover:bg-orange-600"
+                )}
+              >
+                AI Zone
+              </Button>
             </div>
           </div>
         )}

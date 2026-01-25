@@ -10,13 +10,10 @@ export const apiClient = axios.create({
   },
 })
 
-// Request interceptor
+// Request interceptor to add Clerk token
+// Token will be added dynamically from components using the useAuth hook
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token')
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
-    }
     return config
   },
   (error) => Promise.reject(error)
@@ -27,31 +24,26 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('token')
-      window.location.href = '/login'
+      // Clerk will handle redirect to auth
+      window.location.href = '/'
     }
     return Promise.reject(error)
   }
 )
 
+// Export a function to add token to request headers
+export const setAuthToken = (token: string) => {
+  if (token) {
+    apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`
+  } else {
+    delete apiClient.defaults.headers.common['Authorization']
+  }
+}
+
+export default apiClient
+
 // API endpoints
 export const api = {
-  auth: {
-    login: (credentials: { email: string; password: string }) =>
-      apiClient.post('/auth/login', credentials),
-    register: (userData: { email: string; password: string; name: string }) =>
-      apiClient.post('/auth/register', userData),
-    logout: () => apiClient.post('/auth/logout'),
-  },
-  news: {
-    getAll: () => apiClient.get('/news'),
-  },
-  categories: {
-    getAll: () => apiClient.get('/categories'),
-  },
-  sos: {
-    getHelp: () => apiClient.get('/sos'),
-  },
   ai: {
     chat: (message: string) => apiClient.post('/ai/chat', { message }),
     voice: (audioData: FormData) => apiClient.post('/ai/voice', audioData),

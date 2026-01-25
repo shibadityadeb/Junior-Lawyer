@@ -37,9 +37,12 @@ export interface AuthResponse {
   };
   error?: string;
 }
-
-// Extended Express Request with user context
+// Extended Express Request with Clerk user context
 export interface AuthenticatedRequest extends Request {
+  auth?: {
+    userId: string;
+    sessionId?: string;
+  };
   user?: {
     id: string;
     email: string;

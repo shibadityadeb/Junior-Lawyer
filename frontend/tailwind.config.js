@@ -65,6 +65,14 @@ export default {
         indigo: {
           500: '#6366f1',
           600: '#4f46e5',
+        },
+        orange: {
+          500: '#f97316',
+          600: '#ea580c',
+        },
+        blue: {
+          400: '#60a5fa',
+          600: '#2563eb',
         }
       },
       borderRadius: {

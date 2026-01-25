@@ -1,7 +1,4 @@
 import express, { Express, Request, Response, NextFunction } from 'express';
-import sosRoutes from './routes/sos.routes';
-import categoriesRoutes from './routes/categories.routes';
-import newsRoutes from './routes/news.routes';
 import aiRoutes from './routes/ai.routes';
 import authRoutes from './routes/auth.routes';
 import { authMiddleware } from './middlewares/auth.middleware';
@@ -25,8 +22,9 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 // CORS middleware
 app.use((req: Request, res: Response, next: NextFunction) => {
   res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Max-Age', '86400');
   
   if (req.method === 'OPTIONS') {
     return res.sendStatus(200);
@@ -39,15 +37,10 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 // Feature Routes
 // ========================
 
-// Public auth routes
+// Authentication routes
 app.use('/api/auth', authRoutes);
 
-// Public routes (no authentication required)
-app.use('/api/sos', sosRoutes);
-app.use('/api/categories', categoriesRoutes);
-app.use('/api/news', newsRoutes);
-
-// Protected routes (authentication required)
+// Protected AI routes (authentication required)
 app.use('/api/ai', authMiddleware, aiRoutes);
 
 // ========================
@@ -72,9 +65,10 @@ app.get('/', (req: Request, res: Response) => {
     version: '1.0.0',
     endpoints: [
       '/api/health',
-      '/api/sos',
-      '/api/categories',
-      '/api/news',
+      '/api/auth/signup',
+      '/api/auth/login',
+      '/api/auth/logout',
+      '/api/auth/me',
       '/api/ai/chat',
       '/api/ai/voice',
       '/api/ai/document',

@@ -1,4 +1,6 @@
-import { supabaseAdmin } from '../config/supabase';
+// Profile service - Deprecated with Clerk migration
+// Clerk manages user profiles, so this service is no longer needed
+// Keeping for reference in case custom attributes are needed
 
 export interface UserProfile {
   id: string;
@@ -11,7 +13,7 @@ export interface UserProfile {
 }
 
 export interface CreateProfileData {
-  id: string; // User ID from auth.users
+  id: string; // User ID from auth
   name: string;
   age: number;
   gender: 'male' | 'female' | 'other';
@@ -24,154 +26,54 @@ export interface UpdateProfileData {
 }
 
 /**
- * Create a new user profile
- * Called after user is created in Supabase Auth
- * Uses admin client to bypass RLS policies
+ * Create a new user profile - DEPRECATED
+ * Profiles are now managed by Clerk
  */
 export const createProfile = async (
   data: CreateProfileData
 ): Promise<UserProfile | null> => {
-  try {
-    const { data: profile, error } = await supabaseAdmin
-      .from('profiles')
-      .insert({
-        id: data.id,
-        name: data.name,
-        age: data.age,
-        gender: data.gender,
-        created_at: new Date().toISOString(),
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error creating profile:', error);
-      throw error;
-    }
-
-    return profile;
-  } catch (error) {
-    console.error('Unexpected error in createProfile:', error);
-    throw error;
-  }
+  console.log('createProfile called but profile management is now handled by Clerk');
+  return null;
 };
 
 /**
- * Get user profile by user ID
+ * Get user profile by user ID - DEPRECATED
+ * Profiles are now managed by Clerk
  */
 export const getProfileById = async (userId: string): Promise<UserProfile | null> => {
-  try {
-    const { data: profile, error } = await supabaseAdmin
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
-
-    if (error) {
-      // If profile doesn't exist, return null (not an error)
-      if (error.code === 'PGRST116') {
-        return null;
-      }
-      console.error('Error fetching profile:', error);
-      throw error;
-    }
-
-    return profile;
-  } catch (error) {
-    console.error('Unexpected error in getProfileById:', error);
-    throw error;
-  }
+  console.log('getProfileById called but profile management is now handled by Clerk');
+  return null;
 };
 
 /**
- * Update user profile
+ * Update user profile - DEPRECATED
+ * Profiles are now managed by Clerk
  */
 export const updateProfile = async (
   userId: string,
   data: UpdateProfileData
 ): Promise<UserProfile | null> => {
-  try {
-    const updateData: any = {
-      updated_at: new Date().toISOString(),
-    };
-
-    if (data.name !== undefined) updateData.name = data.name;
-    if (data.age !== undefined) updateData.age = data.age;
-    if (data.gender !== undefined) updateData.gender = data.gender;
-
-    const { data: profile, error } = await supabaseAdmin
-      .from('profiles')
-      .update(updateData)
-      .eq('id', userId)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error updating profile:', error);
-      throw error;
-    }
-
-    return profile;
-  } catch (error) {
-    console.error('Unexpected error in updateProfile:', error);
-    throw error;
-  }
+  console.log('updateProfile called but profile management is now handled by Clerk');
+  return null;
 };
 
 /**
- * Create profile for Google OAuth user
- * Called after Google login if profile doesn't exist
+ * Create profile for Google OAuth user - DEPRECATED
+ * Profiles are now managed by Clerk
  */
 export const createGoogleProfile = async (
   userId: string,
   name: string,
   email: string
 ): Promise<UserProfile | null> => {
-  try {
-    // Check if profile already exists
-    const existingProfile = await getProfileById(userId);
-    if (existingProfile) {
-      return existingProfile;
-    }
-
-    // Create profile with defaults for Google users
-    const { data: profile, error } = await supabaseAdmin
-      .from('profiles')
-      .insert({
-        id: userId,
-        name: name,
-        age: null, // Google doesn't provide age
-        gender: null, // Google doesn't provide gender
-        created_at: new Date().toISOString(),
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error creating Google profile:', error);
-      throw error;
-    }
-
-    return profile;
-  } catch (error) {
-    console.error('Unexpected error in createGoogleProfile:', error);
-    throw error;
-  }
+  console.log('createGoogleProfile called but profile management is now handled by Clerk');
+  return null;
 };
 
 /**
- * Delete user profile
+ * Delete user profile - DEPRECATED
+ * Profiles are now managed by Clerk
  */
 export const deleteProfile = async (userId: string): Promise<void> => {
-  try {
-    const { error } = await supabaseAdmin.from('profiles').delete().eq('id', userId);
-
-    if (error) {
-      console.error('Error deleting profile:', error);
-      throw error;
-    }
-  } catch (error) {
-    console.error('Unexpected error in deleteProfile:', error);
-    throw error;
-  }
+  console.log('deleteProfile called but profile management is now handled by Clerk');
 };

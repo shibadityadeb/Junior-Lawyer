@@ -1,5 +1,7 @@
+import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Play } from 'lucide-react'
+import { SignedOut, SignedIn, SignInButton } from '@clerk/clerk-react'
 
 export function HeroSection() {
   return (
@@ -17,12 +19,25 @@ export function HeroSection() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 mb-20">
-            <Button 
-              size="lg" 
-              className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-4 text-lg font-semibold h-auto"
-            >
-              Start Free Trial
-            </Button>
+            <SignedOut>
+              <SignInButton mode="modal">
+                <Button 
+                  size="lg" 
+                  className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-4 text-lg font-semibold h-auto cursor-pointer"
+                >
+                  Start Free Trial
+                </Button>
+              </SignInButton>
+            </SignedOut>
+            <SignedIn>
+              <Button 
+                asChild
+                size="lg" 
+                className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-4 text-lg font-semibold h-auto"
+              >
+                <Link to="/ai">Go to AI Zone</Link>
+              </Button>
+            </SignedIn>
             <Button 
               variant="outline" 
               size="lg" 
