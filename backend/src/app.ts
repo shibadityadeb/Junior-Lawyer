@@ -41,6 +41,8 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 // CORS Configuration - Production-safe, allows only deployed frontend
 const allowedOrigins = [
   'https://junior-lawyer-8jvovk2fv-shibadityadeb-adypueduins-projects.vercel.app',
+  'https://junior-lawyer-lgga9gjji-shibadityadeb-adypueduins-projects.vercel.app',
+  'https://junior-lawyer.vercel.app',
   ...(process.env.ALLOWED_ORIGINS || '').split(',').map(o => o.trim()).filter(Boolean),
 ];
 
