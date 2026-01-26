@@ -38,10 +38,8 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
-// CORS Configuration - Production-safe, allows only deployed frontend
+// CORS Configuration - Production-safe, allows deployed frontend
 const allowedOrigins = [
-  'https://junior-lawyer-8jvovk2fv-shibadityadeb-adypueduins-projects.vercel.app',
-  'https://junior-lawyer-lgga9gjji-shibadityadeb-adypueduins-projects.vercel.app',
   'https://junior-lawyer.vercel.app',
   ...(process.env.ALLOWED_ORIGINS || '').split(',').map(o => o.trim()).filter(Boolean),
 ];
@@ -55,11 +53,20 @@ app.use(
         return;
       }
       
+      // Allow production domain
       if (allowedOrigins.includes(origin)) {
         callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
+        return;
       }
+      
+      // Allow all Vercel preview deployments
+      if (origin.endsWith('-shibadityadeb-adypueduins-projects.vercel.app') || 
+          origin.endsWith('.vercel.app')) {
+        callback(null, true);
+        return;
+      }
+      
+      callback(new Error('Not allowed by CORS'));
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
