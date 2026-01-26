@@ -189,23 +189,33 @@ export function AIZonePage() {
       setUploadedFiles([])
       
     } catch (err: any) {
-      console.error('Error:', err)
+      console.error('Error sending message:', err)
       
       // Handle rate limit error (429)
       if (err.response?.status === 429) {
         setError(err.response?.data?.message || 'Daily AI request limit reached. Try again after 24 hours.')
-        // Don't keep files on rate limit error - just show the message
         setUploadedFiles([])
         return
       }
       
+      // Handle network errors
+      if (err.message === 'Network Error' || !err.response) {
+        setError('Network error: Unable to connect to AI service. Please check your connection and try again.')
+      }
+      // Handle CORS errors
+      else if (err.message.includes('CORS')) {
+        setError('Connection error: The AI service is not accessible. Please try again later.')
+      }
       // Handle file-specific errors
-      if (filesToSend.length > 0) {
-        setError('Failed to send documents. Please try again.')
+      else if (filesToSend.length > 0) {
+        setError(err.response?.data?.message || 'Failed to send documents. Please try again.')
         // Keep files in input so user can retry
         setUploadedFiles(filesToSend)
-      } else {
-        setError(err.response?.data?.message || 'Failed to send message')
+      } 
+      // Handle other API errors
+      else {
+        const errorMessage = err.response?.data?.message || err.response?.data?.error || err.message || 'Failed to send message'
+        setError(errorMessage)
       }
     } finally {
       setLoading(false)

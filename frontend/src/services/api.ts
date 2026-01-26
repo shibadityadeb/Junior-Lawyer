@@ -2,6 +2,8 @@ import axios from 'axios'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
+console.log('[API] Initializing with base URL:', API_BASE_URL)
+
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   timeout: 35000, // 35 seconds to allow Claude API time to respond
@@ -14,15 +16,27 @@ export const apiClient = axios.create({
 // Token will be added dynamically from components using the useAuth hook
 apiClient.interceptors.request.use(
   (config) => {
+    console.log('[API] Request to:', config.url, 'with method:', config.method)
     return config
   },
   (error) => Promise.reject(error)
 )
 
-// Response interceptor
+// Response interceptor with detailed error logging
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log('[API] Response received from:', response.config.url, 'status:', response.status)
+    return response
+  },
   (error) => {
+    console.error('[API] Error details:', {
+      message: error.message,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      url: error.config?.url,
+      data: error.response?.data
+    })
+    
     if (error.response?.status === 401) {
       // Clerk will handle redirect to auth
       window.location.href = '/'
