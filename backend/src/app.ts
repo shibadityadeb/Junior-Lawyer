@@ -1,4 +1,5 @@
 import express, { Express, Request, Response, NextFunction } from 'express';
+import cors from 'cors';
 import aiRoutes from './routes/ai.routes';
 import authRoutes from './routes/auth.routes';
 import documentRoutes from './routes/document.routes';
@@ -37,42 +38,36 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
-// CORS middleware - Configure for your production domain
-const allowedOrigins = process.env.NODE_ENV === 'production' 
-  ? [
-      'https://junior-lawyer-rekk8opb4-shibadityadeb-adypueduins-projects.vercel.app',
-      'https://junior-lawyer-git-main-shibadityadeb-adypueduins-projects.vercel.app',
-      'https://junior-lawyer.vercel.app',
-      ...(process.env.ALLOWED_ORIGINS || '').split(',').map(o => o.trim()).filter(Boolean)
-    ]
-  : ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:3001'];
+// CORS Configuration - Production-safe, allows only deployed frontend
+const allowedOrigins = [
+  'https://junior-lawyer-8jvovk2fv-shibadityadeb-adypueduins-projects.vercel.app',
+  ...(process.env.ALLOWED_ORIGINS || '').split(',').map(o => o.trim()).filter(Boolean),
+];
 
-app.use((req: Request, res: Response, next: NextFunction) => {
-  const origin = req.headers.origin as string;
-  
-  // Allow origins in whitelist
-  if (process.env.NODE_ENV === 'production') {
-    if (origin && allowedOrigins.includes(origin)) {
-      res.header('Access-Control-Allow-Origin', origin);
-    }
-  } else {
-    // Development: allow all localhost
-    if (!origin || origin.includes('localhost') || origin.includes('127.0.0.1')) {
-      res.header('Access-Control-Allow-Origin', origin || '*');
-    }
-  }
-  
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Max-Age', '3600');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
-  }
-  
-  next();
-});
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or Postman)
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+      
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+    maxAge: 3600,
+  })
+);
+
+// Preflight requests handler
+app.options('*', cors());
 
 // ========================
 // Feature Routes
