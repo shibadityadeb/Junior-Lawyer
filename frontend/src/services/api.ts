@@ -86,7 +86,7 @@ export const api = {
         options.files.forEach(file => {
           formData.append('files', file)
         })
-        return apiClient.post('/ai/chat', formData, {
+        return apiClient.post('/api/ai/chat', formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
           },
@@ -94,23 +94,23 @@ export const api = {
       }
       
       // Otherwise send as JSON
-      return apiClient.post('/ai/chat', { 
+      return apiClient.post('/api/ai/chat', { 
         message,
         documentContext: options?.documentContext || ''
       })
     },
-    voice: (audioData: FormData) => apiClient.post('/ai/voice', audioData),
-    document: (documentData: FormData) => apiClient.post('/ai/document', documentData),
+    voice: (audioData: FormData) => apiClient.post('/api/ai/voice', audioData),
+    document: (documentData: FormData) => apiClient.post('/api/ai/document', documentData),
   },
   documents: {
     extract: (files: FormData) => 
-      apiClient.post('/documents/extract', files, {
+      apiClient.post('/api/documents/extract', files, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       }),
     validate: (files: FormData) =>
-      apiClient.post('/documents/validate', files, {
+      apiClient.post('/api/documents/validate', files, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
