@@ -2,8 +2,7 @@ import { Router, Request, Response } from 'express'
 import multer from 'multer'
 import * as path from 'path'
 import * as os from 'os'
-import type { FileFilterCallback } from 'multer'
-import { authMiddleware } from '../middlewares/auth.middleware'
+import { authMiddleware, type AuthenticatedRequest } from '../middlewares/auth.middleware'
 import {
   extractDocumentContent,
   processDocuments,
@@ -28,12 +27,12 @@ router.use((req: Request, res: Response, next) => {
 // Configure multer for temporary file storage
 const upload = multer({
   storage: multer.diskStorage({
-    destination: (req, file, cb) => {
+    destination: (req: Request, file: Express.Multer.File, cb: (error: Error | null, path: string) => void) => {
       // Store in system temp directory
       const tempDir = os.tmpdir()
       cb(null, tempDir)
     },
-    filename: (req, file, cb) => {
+    filename: (req: Request, file: Express.Multer.File, cb: (error: Error | null, filename: string) => void) => {
       // Generate unique filename
       const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9)
       cb(null, uniqueSuffix + path.extname(file.originalname))
@@ -42,7 +41,7 @@ const upload = multer({
   limits: {
     fileSize: 10 * 1024 * 1024, // 10 MB max per file
   },
-  fileFilter: (req: any, file: Express.Multer.File, cb: FileFilterCallback) => {
+  fileFilter: (req: any, file: any, cb: any) => {
     // Allowed file types
     const allowedMimes = [
       'application/pdf',
@@ -71,14 +70,15 @@ router.post('/extract', authMiddleware, upload.array('files', 2), async (req: Re
   const tempFilePaths: string[] = []
 
   try {
-    if (!req.files || req.files.length === 0) {
+    const authReq = req as AuthenticatedRequest;
+    if (!authReq.files || authReq.files.length === 0) {
       return res.status(400).json({ error: 'No files uploaded' })
     }
 
-    console.log(`[DocumentRoutes] Extracting text from ${req.files.length} file(s)`)
+    console.log(`[DocumentRoutes] Extracting text from ${authReq.files.length} file(s)`)
 
     // Convert multer files to format expected by service
-    const files = (req.files as Express.Multer.File[]).map((file) => ({
+    const files = (authReq.files as Express.Multer.File[]).map((file) => ({
       path: file.path,
       originalName: file.originalname,
     }))
@@ -122,11 +122,12 @@ router.post(
     const tempFilePaths: string[] = []
 
     try {
-      if (!req.files || req.files.length === 0) {
+      const authReq = req as AuthenticatedRequest;
+      if (!authReq.files || authReq.files.length === 0) {
         return res.status(400).json({ error: 'No files uploaded' })
       }
 
-      const files = (req.files as Express.Multer.File[]).map((file) => ({
+      const files = (authReq.files as Express.Multer.File[]).map((file) => ({
         path: file.path,
         originalName: file.originalname,
         size: file.size,

@@ -1,14 +1,17 @@
 import { Response, NextFunction, Request } from 'express';
 import { clerkClient } from '@clerk/clerk-sdk-node';
+import type { Multer } from 'multer';
 
 /**
- * Extended Request type with auth information
+ * Extended Request type with auth information and file uploads
  */
 export interface AuthenticatedRequest extends Request {
   auth?: {
     userId: string;
     sessionId?: string;
   };
+  files?: Express.Multer.File[];
+  file?: Express.Multer.File;
 }
 
 /**
@@ -17,7 +20,7 @@ export interface AuthenticatedRequest extends Request {
  * Attaches userId to request object
  */
 export const authMiddleware = async (
-  req: AuthenticatedRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
@@ -55,8 +58,9 @@ export const authMiddleware = async (
         throw new Error('No user ID in token');
       }
 
-      // Attach user info to request
-      req.auth = {
+      // Attach user info to request (cast to AuthenticatedRequest for runtime)
+      const authReq = req as AuthenticatedRequest;
+      authReq.auth = {
         userId: decoded.sub,
         sessionId: decoded.sid,
       };

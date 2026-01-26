@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
-import { AuthResponse, AuthenticatedRequest } from '../types/auth';
+import { AuthResponse } from '../types/auth';
+import type { AuthenticatedRequest } from '../middlewares/auth.middleware';
 import { ZodError } from 'zod';
 
 /**
@@ -34,7 +35,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
  * This endpoint is kept for backward compatibility but not used
  */
 export const logout = async (
-  req: AuthenticatedRequest,
+  req: Request,
   res: Response
 ): Promise<void> => {
   res.status(501).json({
@@ -49,12 +50,13 @@ export const logout = async (
  * Returns the authenticated user's information from the Clerk token
  */
 export const getCurrentUser = async (
-  req: AuthenticatedRequest,
+  req: Request,
   res: Response
 ): Promise<void> => {
   try {
     // User info is populated by auth middleware from Clerk token
-    const { userId, sessionId } = req.auth || {};
+    const authReq = req as AuthenticatedRequest;
+    const { userId, sessionId } = authReq.auth || {};
 
     if (!userId) {
       res.status(401).json({

@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { anthropicService } from '../services/anthropic.service';
 import { processDocuments, formatDocumentsForContext, cleanupTempFiles } from '../services/document.service';
-import type { AuthenticatedRequest } from '../types/auth';
+import type { AuthenticatedRequest } from '../middlewares/auth.middleware';
 
 /**
  * Chat with AI endpoint
@@ -10,12 +10,13 @@ import type { AuthenticatedRequest } from '../types/auth';
  * Protected route - requires Clerk authentication
  */
 export const chatWithAI = async (
-  req: AuthenticatedRequest,
+  req: Request,
   res: Response
 ): Promise<void> => {
   const tempFilePaths: string[] = [];
   
   try {
+    const authReq = req as AuthenticatedRequest;
     const { message, documentContext } = req.body;
     const uploadedFiles = req.files as Express.Multer.File[] | undefined;
 
@@ -29,7 +30,7 @@ export const chatWithAI = async (
     }
 
     // Get authenticated user ID from Clerk
-    const userId = req.auth?.userId;
+    const userId = authReq.auth?.userId;
 
     // Process uploaded files if any
     let extractedContext = documentContext || '';

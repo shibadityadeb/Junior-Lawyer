@@ -1,8 +1,7 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import * as path from 'path';
 import * as os from 'os';
-import type { FileFilterCallback } from 'multer';
 import { chatWithAI, processVoice, processDocument } from '../controllers/ai.controller';
 import { rateLimitMiddleware } from '../middlewares/rateLimit';
 
@@ -11,10 +10,10 @@ const router = Router();
 // Configure multer for file uploads in chat
 const upload = multer({
   storage: multer.diskStorage({
-    destination: (req, file, cb) => {
+    destination: (req: Request, file: Express.Multer.File, cb: (error: Error | null, path: string) => void) => {
       cb(null, os.tmpdir());
     },
-    filename: (req, file, cb) => {
+    filename: (req: Request, file: Express.Multer.File, cb: (error: Error | null, filename: string) => void) => {
       const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
       cb(null, uniqueSuffix + path.extname(file.originalname));
     },
@@ -22,7 +21,7 @@ const upload = multer({
   limits: {
     fileSize: 10 * 1024 * 1024, // 10 MB
   },
-  fileFilter: (req: any, file: Express.Multer.File, cb: FileFilterCallback) => {
+  fileFilter: (req: any, file: any, cb: any) => {
     const allowedExtensions = ['.pdf', '.png', '.jpg', '.jpeg', '.txt', '.docx'];
     const ext = path.extname(file.originalname).toLowerCase();
 

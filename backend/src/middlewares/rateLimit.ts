@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express'
-import type { AuthenticatedRequest } from '../types/auth'
+import type { AuthenticatedRequest } from './auth.middleware'
 
 interface RateLimitStore {
   [userId: string]: {
@@ -19,13 +19,14 @@ const WINDOW_SIZE_MS = 24 * 60 * 60 * 1000 // 24 hours in milliseconds
  * Enforces 5 requests per 24 hours per authenticated user
  */
 export const rateLimitMiddleware = (
-  req: AuthenticatedRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ): void => {
   try {
     // Get user ID from Clerk authentication
-    const userId = req.auth?.userId
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.auth?.userId
 
     // Skip rate limiting for unauthenticated users
     // (they will be blocked by auth middleware)

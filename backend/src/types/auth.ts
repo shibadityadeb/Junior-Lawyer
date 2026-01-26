@@ -37,23 +37,8 @@ export interface AuthResponse {
   };
   error?: string;
 }
-// Extended Express Request with Clerk user context
-export interface AuthenticatedRequest extends Request {
-  auth?: {
-    userId: string;
-    sessionId?: string;
-  };
-  user?: {
-    id: string;
-    email: string;
-    user_metadata?: Record<string, any>;
-    profile?: {
-      name: string;
-      age: number | null;
-      gender: 'male' | 'female' | 'other' | null;
-    };
-  };
-}
+// AuthenticatedRequest is defined in middlewares/auth.middleware.ts
+// Import it from there instead of defining it here
 
 // Auth error types
 export interface AuthError {
