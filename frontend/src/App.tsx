@@ -2,6 +2,9 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { ClerkProvider } from '@clerk/clerk-react'
 import { LandingPage } from '@/pages/LandingPage'
 import { AIZonePage } from '@/pages/AIZonePage'
+import { Templates } from '@/pages/Templates'
+import { Contact } from '@/pages/Contact'
+import { FAQ } from '@/pages/FAQ'
 import { AppShell } from '@/components/AppShell'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { ChatProvider } from '@/context/ChatContext'
@@ -43,6 +46,9 @@ function App() {
       <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Routes>
           <Route path="/" element={<LandingPage />} />
+          <Route path="/templates" element={<Templates />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/faq" element={<FAQ />} />
           <Route 
             path="/ai" 
             element={

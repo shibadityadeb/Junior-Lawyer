@@ -33,6 +33,37 @@ export function Navbar() {
             <span className="text-xl font-semibold text-white tracking-tight">AskJunior</span>
           </Link>
 
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center space-x-8">
+            <Link 
+              to="/templates" 
+              className={cn(
+                "text-sm font-medium transition-colors hover:text-white",
+                isActive('/templates') ? "text-white" : "text-slate-300"
+              )}
+            >
+              Templates
+            </Link>
+            <Link 
+              to="/contact" 
+              className={cn(
+                "text-sm font-medium transition-colors hover:text-white",
+                isActive('/contact') ? "text-white" : "text-slate-300"
+              )}
+            >
+              Contact
+            </Link>
+            <Link 
+              to="/faq" 
+              className={cn(
+                "text-sm font-medium transition-colors hover:text-white",
+                isActive('/faq') ? "text-white" : "text-slate-300"
+              )}
+            >
+              FAQ
+            </Link>
+          </div>
+
           {/* Desktop CTA */}
           <div className="hidden md:flex items-center space-x-3">
             <SignedOut>
@@ -82,6 +113,36 @@ export function Navbar() {
         {isMobileMenuOpen && (
           <div className="md:hidden border-t border-slate-800 bg-slate-950">
             <div className="px-2 pt-2 pb-3 space-y-2">
+              <Link 
+                to="/templates" 
+                className={cn(
+                  "block px-3 py-2 text-sm font-medium transition-colors hover:text-white hover:bg-slate-800 rounded-md",
+                  isActive('/templates') ? "text-white bg-slate-800" : "text-slate-300"
+                )}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Templates
+              </Link>
+              <Link 
+                to="/contact" 
+                className={cn(
+                  "block px-3 py-2 text-sm font-medium transition-colors hover:text-white hover:bg-slate-800 rounded-md",
+                  isActive('/contact') ? "text-white bg-slate-800" : "text-slate-300"
+                )}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Contact
+              </Link>
+              <Link 
+                to="/faq" 
+                className={cn(
+                  "block px-3 py-2 text-sm font-medium transition-colors hover:text-white hover:bg-slate-800 rounded-md",
+                  isActive('/faq') ? "text-white bg-slate-800" : "text-slate-300"
+                )}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                FAQ
+              </Link>
               <SignedOut>
                 <SignInButton mode="modal">
                   <Button variant="ghost" className="w-full justify-start text-slate-300 hover:text-white hover:bg-slate-800 cursor-pointer">
