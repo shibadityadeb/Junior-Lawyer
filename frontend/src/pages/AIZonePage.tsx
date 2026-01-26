@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import { MessageCircle, Plus, Loader, Send, FileText, X, Image, Paperclip, Mic, ArrowLeft } from 'lucide-react'
@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import { api, setAuthToken } from '@/services/api'
 import { Sidebar } from '@/components/Sidebar'
 import { ChatMessage } from '@/components/ChatMessage'
+import { FilePreview } from '@/components/FilePreview'
 import { useChat } from '@/context/ChatContext'
 import { useSpeechToText } from '@/hooks/useSpeechToText'
 
@@ -17,7 +18,12 @@ export function AIZonePage() {
   const [error, setError] = useState<string | null>(null)
   const [showSidebar, setShowSidebar] = useState(false)
   const [attachedFiles, setAttachedFiles] = useState<string[]>([])
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([])
+  const [documentContext, setDocumentContext] = useState<string>('')
   const [showVoiceError, setShowVoiceError] = useState(false)
+  const [showFileMenu, setShowFileMenu] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
   
   const { activeConversation, addMessage, createNewChat } = useChat()
 
@@ -86,20 +92,70 @@ export function AIZonePage() {
     setAttachedFiles(attachedFiles.filter((_, i) => i !== index))
   }
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    const maxSize = 10 * 1024 * 1024 // 10MB
+    const allowedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'text/plain', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+    
+    const validFiles = files.filter(file => {
+      if (!allowedTypes.includes(file.type)) {
+        setError(`File type not supported: ${file.name}. Allowed: PDF, PNG, JPG, TXT, DOCX`)
+        return false
+      }
+      if (file.size > maxSize) {
+        setError(`File too large: ${file.name}. Max 10MB allowed`)
+        return false
+      }
+      return true
+    })
+
+    const newFiles = [...uploadedFiles, ...validFiles].slice(0, 2) // Max 2 files
+    setUploadedFiles(newFiles)
+    e.target.value = '' // Reset input
+  }
+
+  const handleRemoveFile = (index: number) => {
+    setUploadedFiles(uploadedFiles.filter((_, i) => i !== index))
+    setDocumentContext('') // Clear document context when files are removed
+  }
+
+  const handleFilePickerClick = () => {
+    fileInputRef.current?.click()
+  }
+
   // Always create a new chat when the page loads
   useEffect(() => {
+    console.log('[AIZonePage] useEffect: Creating new chat on mount')
     createNewChat()
-  }, [])
+  }, []) // Empty array - run only once on mount
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!input.trim() || !activeConversation) {
+    console.log('[AIZonePage.handleSubmit] Validation check', { 
+      inputLength: input.length,
+      inputTrimmed: input.trim().length,
+      hasActiveConversation: !!activeConversation,
+      activeConversationId: activeConversation?.id
+    })
+    
+    if (!input.trim()) {
+      console.log('[AIZonePage.handleSubmit] Error: Empty input')
       setError('Please enter a message')
+      return
+    }
+    
+    if (!activeConversation) {
+      console.log('[AIZonePage.handleSubmit] Error: No active conversation')
+      setError('Please start a new conversation')
       return
     }
 
     const userMessage = input.trim()
+    const filesToSend = uploadedFiles.length > 0 ? [...uploadedFiles] : []
+    
+    console.log('[AIZonePage.handleSubmit] Starting submit', { userMessage, filesCount: filesToSend.length })
+    
     setInput('')
     setError(null)
     
@@ -108,6 +164,7 @@ export function AIZonePage() {
       role: 'user',
       content: userMessage
     })
+    console.log('[AIZonePage.handleSubmit] User message added to chat')
 
     try {
       setLoading(true)
@@ -118,29 +175,67 @@ export function AIZonePage() {
         setAuthToken(token)
       }
 
-      // Call API
-      const res = await api.ai.chat(userMessage)
+      // If files are attached, show sending animation
+      if (filesToSend.length > 0) {
+        console.log('[AIZonePage.handleSubmit] Adding sending animation message')
+        // Add "Sending documents..." placeholder message
+        addMessage({
+          role: 'system',
+          content: `📤 Sending ${filesToSend.length} document${filesToSend.length > 1 ? 's' : ''}...`
+        })
+      }
+
+      // Send message with files if available
+      console.log('[AIZonePage.handleSubmit] Calling API with files:', filesToSend.length)
+      const res = await api.ai.chat(userMessage, { files: filesToSend })
+      console.log('[AIZonePage.handleSubmit] API response received:', res.data)
       
       // Extract the full AI response object (includes summary, steps, flowchart, etc.)
       const aiResponseData = res.data.data?.aiResponse || {}
+      console.log('[AIZonePage.handleSubmit] Extracted AI response data:', aiResponseData)
       
       // Include user message for context-aware rendering (incident type detection)
       const enrichedResponseData = {
         ...aiResponseData,
-        userMessage: userMessage
+        userMessage: userMessage,
+        usedDocuments: filesToSend.length > 0
+      }
+      
+      // If documents were sent, add confirmation message
+      if (filesToSend.length > 0) {
+        const docNames = filesToSend.map(f => f.name).join(', ')
+        console.log('[AIZonePage.handleSubmit] Adding document confirmation:', docNames)
+        addMessage({
+          role: 'system',
+          content: `✅ Documents processed: ${docNames}`
+        })
       }
       
       // Store the complete response as JSON string so ChatMessage can parse and render it
       const responseContent = JSON.stringify(enrichedResponseData)
+      console.log('[AIZonePage.handleSubmit] Adding AI response message')
       
       addMessage({
         role: 'assistant',
         content: responseContent
       })
+      console.log('[AIZonePage.handleSubmit] AI response message added')
+
+      // Clear uploaded files only after successful submission
+      setUploadedFiles([])
+      setDocumentContext('')
       
     } catch (err: any) {
       console.error('Error:', err)
-      setError(err.response?.data?.message || 'Failed to send message')
+      
+      // Handle file-specific errors
+      if (filesToSend.length > 0) {
+        setError('Failed to send documents. Please try again.')
+        // Keep files in input so user can retry
+        setUploadedFiles(filesToSend)
+      } else {
+        setError(err.response?.data?.message || 'Failed to send message')
+      }
     } finally {
       setLoading(false)
     }
@@ -258,64 +353,46 @@ export function AIZonePage() {
                       <div className="relative flex items-center space-x-2">
                         <button
                           type="button"
-                          onClick={() => setShowSidebar(!showSidebar)}
+                          onClick={handleFilePickerClick}
                           className={cn(
                             "w-8 h-8 rounded-full flex items-center justify-center transition-colors border",
-                            showSidebar 
+                            uploadedFiles.length > 0
                               ? "bg-orange-500 text-white border-orange-500" 
                               : "text-slate-300 hover:text-white hover:bg-slate-700 border-slate-600"
                           )}
+                          title="Attach files (PDF, images, documents)"
                         >
                           <Plus className="w-4 h-4" />
                         </button>
                         
-                        {/* Attachment Popover Menu */}
-                        {showSidebar && (
-                          <div className="absolute bottom-full left-0 mb-2 w-64 bg-slate-700 border border-slate-600 rounded-xl shadow-xl z-50 animate-in fade-in-0 zoom-in-95 duration-150">
-                            <div className="p-2">
-                              <button
-                                onClick={() => {
-                                  addFile(`Photo_${Date.now()}.jpg`)
-                                  setShowSidebar(false)
-                                }}
-                                className="w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-600 transition-colors text-left"
-                                role="menuitem"
-                              >
-                                <Image className="w-5 h-5 text-slate-400" />
-                                <span className="text-sm font-medium text-white">Add photos & files</span>
-                              </button>
-                              
-                              <button
-                                onClick={() => {
-                                  addFile(`Document_${Date.now()}.pdf`)
-                                  setShowSidebar(false)
-                                }}
-                                className="w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-600 transition-colors text-left"
-                                role="menuitem"
-                              >
-                                <FileText className="w-5 h-5 text-slate-400" />
-                                <span className="text-sm font-medium text-white">Add documents</span>
-                              </button>
-                              
-                              <button
-                                onClick={() => {
-                                  addFile(`Image_${Date.now()}.png`)
-                                  setShowSidebar(false)
-                                }}
-                                className="w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-600 transition-colors text-left"
-                                role="menuitem"
-                              >
-                                <Paperclip className="w-5 h-5 text-slate-400" />
-                                <span className="text-sm font-medium text-white">Add images</span>
-                              </button>
-                            </div>
+                        {/* File count indicator */}
+                        {uploadedFiles.length > 0 && (
+                          <div className="absolute left-0 -bottom-6 text-xs text-slate-300 font-medium">
+                            {uploadedFiles.length} file{uploadedFiles.length !== 1 ? 's' : ''} selected
                           </div>
                         )}
                       </div>
 
                       {/* Center Textarea */}
                       <div className="flex-1 relative">
-                        {/* Attached Files Preview */}
+                        {/* Hidden file inputs */}
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          multiple
+                          accept=".pdf,.png,.jpg,.jpeg,.txt,.docx"
+                          onChange={handleFileSelect}
+                          style={{ display: 'none' }}
+                        />
+
+                        {/* File Preview Chips */}
+                        {uploadedFiles.length > 0 && (
+                          <div className="mb-2">
+                            <FilePreview files={uploadedFiles} onRemove={handleRemoveFile} />
+                          </div>
+                        )}
+
+                        {/* Legacy Attached Files Preview - kept for compatibility */}
                         {attachedFiles.length > 0 && (
                           <div className="flex flex-wrap gap-1 mb-2">
                             {attachedFiles.map((file, index) => (

@@ -37,8 +37,9 @@ export function FlowchartRenderer({ mermaidCode, themeType = 'general' }: Flowch
         setError(null)
         mermaid.contentLoaded()
 
-        // Create a unique ID for the diagram
-        const diagramId = `mermaid-${themeType}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+        // Create a unique ID for the diagram (sanitized - no special chars for CSS selectors)
+        const sanitizedThemeType = themeType.replace(/[^a-zA-Z0-9-_]/g, '')
+        const diagramId = `mermaid-${sanitizedThemeType}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 
         // Add theme config to the flowchart definition
         const enhancedCode = getMermaidThemeConfig() + '\n' + mermaidCode

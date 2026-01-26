@@ -21,7 +21,7 @@ export interface AIResponseData {
 }
 
 interface ChatMessageProps {
-  role: 'user' | 'assistant'
+  role: 'user' | 'assistant' | 'system'
   content: string
   aiResponseData?: AIResponseData
 }
@@ -184,10 +184,10 @@ function AIResponseRenderer({ data }: { data: AIResponseData }) {
       : '',
     
     // Legacy format fallback
-    !data.matterSummary && theme.title ? theme.title : '',
-    !data.matterSummary && theme.empathyOpener ? theme.empathyOpener : '',
+    !data.matterSummary && theme?.title ? theme.title : '',
+    !data.matterSummary && theme?.empathyOpener ? theme.empathyOpener : '',
     data.summary && !data.matterSummary ? data.summary : '',
-    theme.immediateOptions && theme.immediateOptions.length > 0 && !data.matterSummary
+    theme?.immediateOptions && Array.isArray(theme.immediateOptions) && theme.immediateOptions.length > 0 && !data.matterSummary
       ? `## Your Immediate Options\n${theme.immediateOptions.map(o => `- ${o}`).join('\n')}`
       : '',
     data.steps && data.steps.length > 0 && !data.conditionalGuidance
@@ -196,7 +196,7 @@ function AIResponseRenderer({ data }: { data: AIResponseData }) {
     data.legal_references && data.legal_references.length > 0
       ? `## Relevant Legal Provisions\n${data.legal_references.map(r => `- ${r}`).join('\n')}`
       : '',
-    theme.clarifyingQuestions && theme.clarifyingQuestions.length > 0 && !data.clarifyingQuestions
+    theme?.clarifyingQuestions && Array.isArray(theme.clarifyingQuestions) && theme.clarifyingQuestions.length > 0 && !data.clarifyingQuestions
       ? `## To Give You Better Guidance\n${theme.clarifyingQuestions.map(q => `- ${q}`).join('\n')}`
       : '',
   ]
@@ -310,7 +310,7 @@ function AIResponseRenderer({ data }: { data: AIResponseData }) {
               animationDelay: `${blocks.length * 120}ms`
             }}
           >
-            {data.matterSummary ? `${incidentType === 'general' ? 'Your' : theme.name} Decision Path` : (incidentType === 'general' ? 'Process Flowchart' : `${theme.name} Process`)}
+            {data.matterSummary ? `${incidentType === 'general' ? 'Your' : theme?.name || 'Legal'} Decision Path` : (incidentType === 'general' ? 'Process Flowchart' : `${theme?.name || 'Legal'} Process`)}
           </h4>
           <div className="w-full bg-slate-950/60 rounded-lg p-4 border border-slate-700/50 overflow-x-auto">
             <FlowchartRenderer 
@@ -357,6 +357,17 @@ export function ChatMessage({
       <div className="flex justify-end mb-4">
         <div className="max-w-xl bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-2xl px-5 py-3 shadow-md">
           <p className="text-sm leading-relaxed whitespace-pre-wrap">{content}</p>
+        </div>
+      </div>
+    )
+  }
+
+  // System messages (document confirmations, status updates)
+  if (role === 'system') {
+    return (
+      <div className="flex justify-center mb-4">
+        <div className="max-w-2xl bg-slate-700/40 border border-slate-600/50 text-slate-300 rounded-lg px-4 py-2 shadow-sm">
+          <p className="text-xs leading-relaxed whitespace-pre-wrap font-medium">{content}</p>
         </div>
       </div>
     )

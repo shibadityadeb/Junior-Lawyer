@@ -1,6 +1,7 @@
 import express, { Express, Request, Response, NextFunction } from 'express';
 import aiRoutes from './routes/ai.routes';
 import authRoutes from './routes/auth.routes';
+import documentRoutes from './routes/document.routes';
 import { authMiddleware } from './middlewares/auth.middleware';
 
 const app: Express = express();
@@ -49,6 +50,9 @@ app.use('/api/auth', authRoutes);
 
 // Protected AI routes (authentication required)
 app.use('/api/ai', authMiddleware, aiRoutes);
+
+// Protected Document routes (authentication required)
+app.use('/api/documents', documentRoutes);
 
 // ========================
 // Health Check Endpoint

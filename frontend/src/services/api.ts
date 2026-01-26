@@ -45,8 +45,42 @@ export default apiClient
 // API endpoints
 export const api = {
   ai: {
-    chat: (message: string) => apiClient.post('/ai/chat', { message }),
+    chat: (message: string, options?: { documentContext?: string; files?: File[] }) => {
+      // If files are attached, send as multipart/form-data
+      if (options?.files && options.files.length > 0) {
+        const formData = new FormData()
+        formData.append('message', message)
+        options.files.forEach(file => {
+          formData.append('files', file)
+        })
+        return apiClient.post('/ai/chat', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        })
+      }
+      
+      // Otherwise send as JSON
+      return apiClient.post('/ai/chat', { 
+        message,
+        documentContext: options?.documentContext || ''
+      })
+    },
     voice: (audioData: FormData) => apiClient.post('/ai/voice', audioData),
     document: (documentData: FormData) => apiClient.post('/ai/document', documentData),
+  },
+  documents: {
+    extract: (files: FormData) => 
+      apiClient.post('/documents/extract', files, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }),
+    validate: (files: FormData) =>
+      apiClient.post('/documents/validate', files, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }),
   },
 }

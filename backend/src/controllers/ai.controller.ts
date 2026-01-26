@@ -1,18 +1,23 @@
 import { Request, Response } from 'express';
 import { anthropicService } from '../services/anthropic.service';
+import { processDocuments, formatDocumentsForContext, cleanupTempFiles } from '../services/document.service';
 import type { AuthenticatedRequest } from '../types/auth';
 
 /**
  * Chat with AI endpoint
  * Processes legal questions through Anthropic Claude
+ * Supports optional file uploads for document-aware responses
  * Protected route - requires Clerk authentication
  */
 export const chatWithAI = async (
   req: AuthenticatedRequest,
   res: Response
 ): Promise<void> => {
+  const tempFilePaths: string[] = [];
+  
   try {
-    const { message } = req.body;
+    const { message, documentContext } = req.body;
+    const uploadedFiles = req.files as Express.Multer.File[] | undefined;
 
     // Validate message field
     if (!message || typeof message !== 'string' || message.trim().length === 0) {
@@ -26,8 +31,40 @@ export const chatWithAI = async (
     // Get authenticated user ID from Clerk
     const userId = req.auth?.userId;
 
-    // Process question through Claude
-    const aiResponse = await anthropicService.askLegalQuestion(message);
+    // Process uploaded files if any
+    let extractedContext = documentContext || '';
+    let usedDocuments = !!documentContext && documentContext.length > 0;
+
+    if (uploadedFiles && uploadedFiles.length > 0) {
+      try {
+        console.log(`[ChatWithAI] Processing ${uploadedFiles.length} uploaded file(s)`);
+        
+        // Track files for cleanup
+        tempFilePaths.push(...uploadedFiles.map(f => f.path));
+
+        // Convert multer files to format expected by service
+        const files = uploadedFiles.map((file) => ({
+          path: file.path,
+          originalName: file.originalname,
+        }));
+
+        // Extract document content
+        const extractedDocuments = await processDocuments(files);
+        
+        // Format for Claude context
+        extractedContext = formatDocumentsForContext(extractedDocuments);
+        usedDocuments = true;
+
+        console.log(`[ChatWithAI] Successfully extracted context from ${files.length} file(s)`);
+      } catch (fileError: any) {
+        console.error('[ChatWithAI] Error processing files:', fileError);
+        // Continue with message even if file processing fails
+        console.log('[ChatWithAI] Continuing with message-only response');
+      }
+    }
+
+    // Process question through Claude with optional document context
+    const aiResponse = await anthropicService.askLegalQuestion(message, extractedContext);
 
     // Return formatted response
     res.status(200).json({
@@ -37,6 +74,7 @@ export const chatWithAI = async (
         userId: userId || 'unknown',
         userMessage: message,
         aiResponse: aiResponse,
+        usedDocuments: usedDocuments,
         timestamp: new Date().toISOString(),
       },
       message: 'Legal question processed successfully',
@@ -84,6 +122,15 @@ export const chatWithAI = async (
       message: 'Error processing chat request',
       error: errorMessage,
     });
+  } finally {
+    // Cleanup temporary files
+    if (tempFilePaths.length > 0) {
+      try {
+        await cleanupTempFiles(tempFilePaths);
+      } catch (cleanupError) {
+        console.error('[ChatWithAI] Error cleaning up temp files:', cleanupError);
+      }
+    }
   }
 };
 

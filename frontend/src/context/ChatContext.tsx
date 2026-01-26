@@ -4,7 +4,7 @@ import { loadConversations, saveConversations } from '@/utils/chatStorage'
 
 export interface Message {
   id: string
-  role: 'user' | 'assistant'
+  role: 'user' | 'assistant' | 'system'
   content: string
   timestamp: number // milliseconds since epoch
 }
@@ -83,6 +83,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   }, [conversations, activeConversationId, userId, isLoaded])
 
   const createNewChat = () => {
+    console.log('[ChatContext.createNewChat] Creating new conversation')
     const now = Date.now()
     const newConversation: Conversation = {
       id: generateId(),
@@ -92,8 +93,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       updatedAt: now
     }
 
+    console.log('[ChatContext.createNewChat] New conversation created:', newConversation.id)
     setConversations(prev => [newConversation, ...prev])
     setActiveConversationId(newConversation.id)
+    console.log('[ChatContext.createNewChat] Active conversation set to:', newConversation.id)
   }
 
   const switchToChat = (conversationId: string) => {

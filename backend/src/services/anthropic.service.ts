@@ -185,7 +185,7 @@ export class AnthropicService {
    * Process a legal question through Claude and format response strictly
    * Implements retry logic and strict validation
    */
-  async askLegalQuestion(userMessage: string): Promise<AIResponse> {
+  async askLegalQuestion(userMessage: string, documentContext: string = ''): Promise<AIResponse> {
     const maxRetries = 1;
     let lastError: Error | null = null;
 
@@ -193,16 +193,28 @@ export class AnthropicService {
       try {
         console.log(`\n📤 [Attempt ${attempt + 1}/${maxRetries + 1}] Calling Anthropic Claude API...`);
         console.log(`User message: "${userMessage}"`);
+        if (documentContext) {
+          console.log(`Document context provided: ${documentContext.substring(0, 100)}...`);
+        }
+
+        // Build system prompt with document context if available
+        let systemPrompt = SYSTEM_PROMPT;
+        let userContent = userMessage;
+        
+        if (documentContext && documentContext.length > 0) {
+          systemPrompt += `\n\n===== USER-PROVIDED DOCUMENTS =====\n${documentContext}\n\nWhen answering, prioritize information from user-provided documents.`;
+          userContent = `${userMessage}\n\n[User has provided supporting documents for this query.]`;
+        }
 
         const response = await this.client.messages.create({
           model: 'claude-3-5-haiku-20241022',
           max_tokens: 700,
           temperature: 0.3,
-          system: SYSTEM_PROMPT,
+          system: systemPrompt,
           messages: [
             {
               role: 'user',
-              content: userMessage,
+              content: userContent,
             },
           ],
         });
