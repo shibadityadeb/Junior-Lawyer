@@ -18,7 +18,7 @@ export const chatWithAI = async (
   try {
     const authReq = req as AuthenticatedRequest;
     const { message, documentContext } = req.body;
-    const uploadedFiles = req.files as Express.Multer.File[] | undefined;
+    const uploadedFiles = req.files as any[] | undefined;
 
     // Validate message field
     if (!message || typeof message !== 'string' || message.trim().length === 0) {

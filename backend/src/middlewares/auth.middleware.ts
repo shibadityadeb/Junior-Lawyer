@@ -1,6 +1,5 @@
 import { Response, NextFunction, Request } from 'express';
 import { clerkClient } from '@clerk/clerk-sdk-node';
-import type { Multer } from 'multer';
 
 /**
  * Extended Request type with auth information and file uploads
@@ -10,8 +9,8 @@ export interface AuthenticatedRequest extends Request {
     userId: string;
     sessionId?: string;
   };
-  files?: Express.Multer.File[];
-  file?: Express.Multer.File;
+  files?: any[];
+  file?: any;
 }
 
 /**

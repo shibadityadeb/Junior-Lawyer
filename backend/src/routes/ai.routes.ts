@@ -10,10 +10,10 @@ const router = Router();
 // Configure multer for file uploads in chat
 const upload = multer({
   storage: multer.diskStorage({
-    destination: (req: Request, file: Express.Multer.File, cb: (error: Error | null, path: string) => void) => {
+    destination: (req: Request, file: any, cb: (error: Error | null, path: string) => void) => {
       cb(null, os.tmpdir());
     },
-    filename: (req: Request, file: Express.Multer.File, cb: (error: Error | null, filename: string) => void) => {
+    filename: (req: Request, file: any, cb: (error: Error | null, filename: string) => void) => {
       const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
       cb(null, uniqueSuffix + path.extname(file.originalname));
     },

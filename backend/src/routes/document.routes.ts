@@ -27,12 +27,12 @@ router.use((req: Request, res: Response, next) => {
 // Configure multer for temporary file storage
 const upload = multer({
   storage: multer.diskStorage({
-    destination: (req: Request, file: Express.Multer.File, cb: (error: Error | null, path: string) => void) => {
+    destination: (req: Request, file: any, cb: (error: Error | null, path: string) => void) => {
       // Store in system temp directory
       const tempDir = os.tmpdir()
       cb(null, tempDir)
     },
-    filename: (req: Request, file: Express.Multer.File, cb: (error: Error | null, filename: string) => void) => {
+    filename: (req: Request, file: any, cb: (error: Error | null, filename: string) => void) => {
       // Generate unique filename
       const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9)
       cb(null, uniqueSuffix + path.extname(file.originalname))
@@ -78,7 +78,7 @@ router.post('/extract', authMiddleware, upload.array('files', 2), async (req: Re
     console.log(`[DocumentRoutes] Extracting text from ${authReq.files.length} file(s)`)
 
     // Convert multer files to format expected by service
-    const files = (authReq.files as Express.Multer.File[]).map((file) => ({
+    const files = (authReq.files as any[]).map((file) => ({
       path: file.path,
       originalName: file.originalname,
     }))
@@ -127,7 +127,7 @@ router.post(
         return res.status(400).json({ error: 'No files uploaded' })
       }
 
-      const files = (authReq.files as Express.Multer.File[]).map((file) => ({
+      const files = (authReq.files as any[]).map((file) => ({
         path: file.path,
         originalName: file.originalname,
         size: file.size,
