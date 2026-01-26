@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Download } from 'lucide-react'
 import { useState } from 'react'
+import { useAuth, useClerk } from '@clerk/clerk-react'
 import { Button } from '@/components/ui/button'
 import { Navbar } from '@/components/Navbar'
 import { Footer } from '@/components/Footer'
@@ -8,11 +9,22 @@ import { getTemplateCategories, downloadTemplate } from '@/utils/templateLoader'
 
 export function Templates() {
   const navigate = useNavigate()
+  const { isSignedIn } = useAuth()
+  const { openSignIn } = useClerk()
   const categories = getTemplateCategories()
   const [expandedCategory, setExpandedCategory] = useState<string | null>(categories[0]?.key)
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
+  const [authError, setAuthError] = useState<string | null>(null)
 
   const handleDownload = (templatePath: string, templateName: string, templateId: string) => {
+    // Check authentication before download
+    if (!isSignedIn) {
+      setAuthError('Please sign in to download templates')
+      setTimeout(() => setAuthError(null), 3000)
+      openSignIn()
+      return
+    }
+
     setDownloadingId(templateId)
     try {
       downloadTemplate(templatePath, templateName)
@@ -24,6 +36,11 @@ export function Templates() {
   return (
     <div className="min-h-screen bg-slate-950">
       <Navbar />
+      {authError && (
+        <div className="bg-amber-500/20 border border-amber-500/50 text-amber-400 px-4 py-3 mx-4 mt-4 rounded-lg text-sm">
+          {authError}
+        </div>
+      )}
       <main>
         {/* Hero Section */}
         <section className="pt-24 pb-20 px-4 sm:px-6 lg:px-8">
@@ -115,8 +132,7 @@ export function Templates() {
                                 isDownloading
                                   ? 'bg-slate-700 text-slate-300 cursor-not-allowed'
                                   : 'bg-orange-500 hover:bg-orange-600 text-white active:scale-95'
-                              }`}
-                            >
+                              }`}                              title={!isSignedIn ? 'Sign in to download' : ''}                            >
                               <Download className="w-4 h-4" />
                               <span>{isDownloading ? 'Downloading...' : 'Download'}</span>
                             </button>

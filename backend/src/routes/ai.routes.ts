@@ -4,6 +4,7 @@ import * as path from 'path';
 import * as os from 'os';
 import type { FileFilterCallback } from 'multer';
 import { chatWithAI, processVoice, processDocument } from '../controllers/ai.controller';
+import { rateLimitMiddleware } from '../middlewares/rateLimit';
 
 const router = Router();
 
@@ -34,7 +35,9 @@ const upload = multer({
 });
 
 // POST /api/ai/chat - Text-based chat with AI (supports file uploads)
-router.post('/chat', upload.array('files', 2), chatWithAI);
+// Protected: Requires Clerk authentication
+// Rate limited: 5 requests per 24 hours per user
+router.post('/chat', rateLimitMiddleware, upload.array('files', 2), chatWithAI);
 
 // POST /api/ai/voice - Voice input processing
 router.post('/voice', processVoice);

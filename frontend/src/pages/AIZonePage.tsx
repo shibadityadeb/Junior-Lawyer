@@ -228,6 +228,14 @@ export function AIZonePage() {
     } catch (err: any) {
       console.error('Error:', err)
       
+      // Handle rate limit error (429)
+      if (err.response?.status === 429) {
+        setError(err.response?.data?.message || 'Daily AI request limit reached. Try again after 24 hours.')
+        // Don't keep files on rate limit error - just show the message
+        setUploadedFiles([])
+        return
+      }
+      
       // Handle file-specific errors
       if (filesToSend.length > 0) {
         setError('Failed to send documents. Please try again.')
