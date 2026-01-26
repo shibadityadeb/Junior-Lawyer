@@ -1,16 +1,27 @@
 import axios from 'axios'
 
-// Strict requirement: VITE_API_BASE_URL must be defined
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
+// Get API base URL from environment
+// VITE_API_BASE_URL must be set at build time or runtime
+let API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 
-if (!API_BASE_URL) {
+// If not set via environment, use production default
+if (!API_BASE_URL || API_BASE_URL === 'undefined') {
+  // Production fallback to Render backend
+  API_BASE_URL = 'https://junior-lawyer.onrender.com'
+  console.warn('[API] Using fallback production URL:', API_BASE_URL)
+}
+
+// Validate that we have a valid URL
+if (!API_BASE_URL || API_BASE_URL.includes('localhost') || API_BASE_URL.includes('127.0.0.1')) {
+  console.error('[API] Invalid API_BASE_URL:', API_BASE_URL)
   throw new Error(
-    'VITE_API_BASE_URL environment variable is not defined. ' +
-    'Please set this to the backend API URL (e.g., https://junior-lawyer.onrender.com)'
+    'Invalid API_BASE_URL configuration. ' +
+    'Expected a valid production URL (e.g., https://junior-lawyer.onrender.com), ' +
+    `got: ${API_BASE_URL}`
   )
 }
 
-console.log('[API] Initializing with base URL:', API_BASE_URL)
+console.log('[API] Initialized with base URL:', API_BASE_URL)
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
