@@ -2,15 +2,21 @@ import { useState, useEffect, useRef } from 'react'
 import { FlowchartRenderer } from './FlowchartRenderer'
 import { detectIncidentType, getThemeByIncidentType } from '@/utils/flowchartThemes'
 import { parseResponseIntoBlocks, Block } from '@/utils/responseParser'
+import { useTextToSpeech } from '@/hooks/useTextToSpeech'
 
 export interface AIResponseData {
-  summary: string
-  steps: string[]
-  legal_references: string[]
+  matterSummary: string
+  incidentType: string
+  clarifyingQuestions: string[]
+  conditionalGuidance: string
+  legalPathways: string[]
   flowchart: string
   disclaimer: string
   userMessage?: string
-  clarifyingQuestions?: string[]
+  // Legacy fields for backward compatibility
+  summary?: string
+  steps?: string[]
+  legal_references?: string[]
   immediateOptions?: string[]
 }
 
@@ -22,14 +28,29 @@ interface ChatMessageProps {
 
 /**
  * Parse AI response string to extract structured data
- * Backend sends: { summary, steps, legal_references, flowchart, disclaimer }
+ * Backend sends: { matterSummary, incidentType, clarifyingQuestions, conditionalGuidance, legalPathways, flowchart, disclaimer }
+ * Also supports legacy format: { summary, steps, legal_references, flowchart, disclaimer }
  */
 function parseAIResponse(content: string): AIResponseData | null {
   try {
     // Try to parse as JSON if it looks like JSON
     if (content.trim().startsWith('{')) {
       const parsed = JSON.parse(content)
-      // Ensure all required fields exist
+      
+      // Check for new format (two-phase lawyer-like model)
+      if (
+        parsed.matterSummary &&
+        parsed.incidentType &&
+        Array.isArray(parsed.clarifyingQuestions) &&
+        parsed.conditionalGuidance &&
+        Array.isArray(parsed.legalPathways) &&
+        parsed.flowchart &&
+        parsed.disclaimer
+      ) {
+        return parsed
+      }
+      
+      // Fallback: Check for legacy format
       if (
         parsed.summary &&
         Array.isArray(parsed.steps) &&
@@ -124,31 +145,58 @@ function BlockRenderer({
 
 /**
  * Enhanced AI Response Renderer with line-by-line reveal animation
+ * Supports both new two-phase lawyer-like model and legacy format
  */
 function AIResponseRenderer({ data }: { data: AIResponseData }) {
   const [visibleBlockIndex, setVisibleBlockIndex] = useState(-1)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const prefersReducedMotion = useRef(false)
 
-  // Detect incident type from user message for enhanced rendering
-  const incidentType = data.userMessage ? detectIncidentType(data.userMessage) : 'general'
+  // Text-to-Speech hook
+  const { isSpeaking, isSupported: isTTSSupported, speak, stop } = useTextToSpeech({
+    language: 'en-IN',
+  })
+
+  // Use incident type from response if available (new format), else detect from user message
+  const incidentType = data.incidentType || (data.userMessage ? detectIncidentType(data.userMessage) : 'general')
   const theme = getThemeByIncidentType(incidentType)
 
   // Build combined text content to parse into blocks
+  // Support both new two-phase format and legacy format
   const combinedText = [
-    theme.title,
-    theme.empathyOpener,
-    data.summary,
-    theme.immediateOptions && theme.immediateOptions.length > 0 
+    // New format: "Understanding Your Situation" heading
+    data.matterSummary ? '## Understanding Your Situation' : '',
+    data.matterSummary ? data.matterSummary : '',
+    
+    // Clarifying Questions (new format - Phase 1)
+    data.clarifyingQuestions && data.clarifyingQuestions.length > 0
+      ? `## Questions to Better Understand Your Situation\n${data.clarifyingQuestions.map(q => `- ${q}`).join('\n')}`
+      : '',
+    
+    // Conditional Guidance (new format - Phase 2)
+    data.conditionalGuidance 
+      ? `## Legal Guidance\n${data.conditionalGuidance}`
+      : '',
+    
+    // Legal Pathways (new format)
+    data.legalPathways && data.legalPathways.length > 0
+      ? `## Your Possible Next Steps\n${data.legalPathways.map(p => `- ${p}`).join('\n')}`
+      : '',
+    
+    // Legacy format fallback
+    !data.matterSummary && theme.title ? theme.title : '',
+    !data.matterSummary && theme.empathyOpener ? theme.empathyOpener : '',
+    data.summary && !data.matterSummary ? data.summary : '',
+    theme.immediateOptions && theme.immediateOptions.length > 0 && !data.matterSummary
       ? `## Your Immediate Options\n${theme.immediateOptions.map(o => `- ${o}`).join('\n')}`
       : '',
-    data.steps && data.steps.length > 0
+    data.steps && data.steps.length > 0 && !data.conditionalGuidance
       ? `## What Typically Happens Next\n${data.steps.map((s, i) => `${i + 1}. ${s.replace(/^Step \d+:\s*/, '')}`).join('\n')}`
       : '',
     data.legal_references && data.legal_references.length > 0
       ? `## Relevant Legal Provisions\n${data.legal_references.map(r => `- ${r}`).join('\n')}`
       : '',
-    theme.clarifyingQuestions && theme.clarifyingQuestions.length > 0
+    theme.clarifyingQuestions && theme.clarifyingQuestions.length > 0 && !data.clarifyingQuestions
       ? `## To Give You Better Guidance\n${theme.clarifyingQuestions.map(q => `- ${q}`).join('\n')}`
       : '',
   ]
@@ -190,8 +238,58 @@ function AIResponseRenderer({ data }: { data: AIResponseData }) {
     }
   }, [blocks.length])
 
+  const handleReadAloud = () => {
+    if (isSpeaking) {
+      stop()
+    } else {
+      // Extract plain text from combined text (remove markdown)
+      const plainText = combinedText
+        .replace(/#{1,6}\s+/g, '') // Remove headings
+        .replace(/[*\-]\s+/g, '') // Remove bullets
+        .replace(/\n/g, ' ') // Remove newlines
+        .replace(/\s+/g, ' ') // Normalize spaces
+        .trim()
+
+      if (plainText) {
+        speak(plainText)
+      }
+    }
+  }
+
   return (
     <div className="w-full space-y-0 text-slate-200">
+      {/* Read Aloud Button - Top Right */}
+      {isTTSSupported && (
+        <div className="flex justify-end mb-2">
+          <button
+            onClick={handleReadAloud}
+            className={`inline-flex items-center space-x-2 px-3 py-2 rounded text-xs font-medium transition-colors ${
+              isSpeaking
+                ? 'bg-orange-600/20 border border-orange-500/50 text-orange-300 hover:bg-orange-600/30'
+                : 'bg-slate-700/50 border border-slate-600/50 text-slate-300 hover:bg-slate-700 hover:text-white'
+            }`}
+            aria-label={isSpeaking ? 'Stop reading' : 'Read response aloud'}
+            title={isSpeaking ? 'Stop reading aloud' : 'Read response aloud'}
+          >
+            {isSpeaking ? (
+              <>
+                <svg className="w-4 h-4 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9 9a1 1 0 11-2 0 1 1 0 012 0zm4 0a1 1 0 11-2 0 1 1 0 012 0zm4 0a1 1 0 11-2 0 1 1 0 012 0z" />
+                </svg>
+                <span>Pause</span>
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM14.657 2.172a1 1 0 011.414 0A6.972 6.972 0 0118 10a6.972 6.972 0 01-1.929 4.928 1 1 0 01-1.414-1.414A4.972 4.972 0 0016 10c0-1.713-.672-3.259-1.757-4.364a1 1 0 010-1.414z" />
+                </svg>
+                <span>Read aloud</span>
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
       {/* Render all blocks, controlling visibility via animation */}
       {blocks.map((block, idx) => (
         <BlockRenderer
@@ -212,7 +310,7 @@ function AIResponseRenderer({ data }: { data: AIResponseData }) {
               animationDelay: `${blocks.length * 120}ms`
             }}
           >
-            {incidentType === 'general' ? 'Process Flowchart' : `${theme.name} Process`}
+            {data.matterSummary ? `${incidentType === 'general' ? 'Your' : theme.name} Decision Path` : (incidentType === 'general' ? 'Process Flowchart' : `${theme.name} Process`)}
           </h4>
           <div className="w-full bg-slate-950/60 rounded-lg p-4 border border-slate-700/50 overflow-x-auto">
             <FlowchartRenderer 

@@ -7,6 +7,7 @@ import { api, setAuthToken } from '@/services/api'
 import { Sidebar } from '@/components/Sidebar'
 import { ChatMessage } from '@/components/ChatMessage'
 import { useChat } from '@/context/ChatContext'
+import { useSpeechToText } from '@/hooks/useSpeechToText'
 
 export function AIZonePage() {
   const navigate = useNavigate()
@@ -16,8 +17,64 @@ export function AIZonePage() {
   const [error, setError] = useState<string | null>(null)
   const [showSidebar, setShowSidebar] = useState(false)
   const [attachedFiles, setAttachedFiles] = useState<string[]>([])
+  const [showVoiceError, setShowVoiceError] = useState(false)
   
   const { activeConversation, addMessage, createNewChat } = useChat()
+
+  // Speech-to-Text hook
+  const {
+    transcript,
+    interimTranscript,
+    isListening,
+    isSupported: isSTTSupported,
+    error: sttError,
+    startListening,
+    stopListening,
+    resetTranscript,
+  } = useSpeechToText({
+    language: 'en-IN',
+    continuous: true,
+    interimResults: true,
+  })
+
+  // Update input with transcript
+  useEffect(() => {
+    if (transcript) {
+      setInput((prev) => prev + transcript)
+      resetTranscript()
+    }
+  }, [transcript, resetTranscript])
+
+  // Display STT errors
+  useEffect(() => {
+    if (sttError) {
+      setShowVoiceError(true)
+      const timer = setTimeout(() => setShowVoiceError(false), 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [sttError])
+
+  const handleMicClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    console.log('[AIZonePage.handleMicClick] Clicked. isListening:', isListening, 'isSupported:', isSTTSupported)
+    
+    e.preventDefault()
+    e.stopPropagation()
+
+    if (!isSTTSupported) {
+      console.log('[AIZonePage.handleMicClick] Voice not supported')
+      setShowVoiceError(true)
+      return
+    }
+
+    if (isListening) {
+      console.log('[AIZonePage.handleMicClick] Stopping')
+      stopListening()
+    } else {
+      console.log('[AIZonePage.handleMicClick] Starting')
+      setShowVoiceError(false)
+      startListening()
+    }
+  }
 
   const addFile = (fileName: string) => {
     if (attachedFiles.length < 2) {
@@ -168,6 +225,28 @@ export function AIZonePage() {
 
             {/* ChatGPT-Style Input Composer - Pinned at bottom */}
             <div className="relative mt-auto shrink-0">
+              {/* Voice Error Message */}
+              {showVoiceError && sttError && (
+                <div className="px-4 py-2 mb-2 bg-red-900/20 border border-red-700/30 rounded text-xs text-red-300">
+                  {sttError}
+                </div>
+              )}
+
+              {/* Listening Status */}
+              {isListening && (
+                <div className="px-4 py-2 mb-2 bg-blue-900/20 border border-blue-700/30 rounded text-xs text-blue-300 flex items-center space-x-2">
+                  <span className="inline-block w-2 h-2 bg-blue-400 rounded-full animate-pulse"></span>
+                  <span>Listening… Click mic again or wait for silence to stop</span>
+                </div>
+              )}
+
+              {/* Interim Transcript Display */}
+              {interimTranscript && (
+                <div className="px-4 py-2 mb-2 bg-slate-700/30 border border-slate-600/30 rounded text-xs text-slate-300">
+                  {interimTranscript}
+                </div>
+              )}
+
               {/* Main Input Panel */}
               <div className="relative">
                 {/* Input Container */}
@@ -283,9 +362,19 @@ export function AIZonePage() {
                       <div className="flex items-center space-x-2">
                         <button
                           type="button"
-                          className="w-8 h-8 rounded-full text-slate-400 hover:text-white hover:bg-slate-700 flex items-center justify-center transition-colors"
+                          onClick={handleMicClick}
+                          disabled={loading || !isSTTSupported}
+                          className={cn(
+                            "w-8 h-8 rounded-full flex items-center justify-center transition-colors",
+                            isListening
+                              ? "bg-red-600 text-white"
+                              : isSTTSupported
+                                ? "text-slate-400 hover:text-white hover:bg-slate-700"
+                                : "text-slate-600 cursor-not-allowed"
+                          )}
+                          title={isSTTSupported ? (isListening ? 'Listening… Click to stop' : 'Click to speak') : 'Voice not supported'}
                         >
-                          <Mic className="w-4 h-4" />
+                          <Mic className={cn("w-4 h-4", isListening && "animate-pulse")} />
                         </button>
                         
                         <button
