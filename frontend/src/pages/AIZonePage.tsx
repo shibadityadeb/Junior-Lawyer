@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
-import { MessageCircle, Plus, Loader, Send, FileText, X, Image, Paperclip, Mic, ArrowLeft } from 'lucide-react'
+import { MessageCircle, Plus, Loader, Send, Mic, ArrowLeft } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { api, setAuthToken } from '@/services/api'
 import { Sidebar } from '@/components/Sidebar'
@@ -16,14 +16,9 @@ export function AIZonePage() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [showSidebar, setShowSidebar] = useState(false)
-  const [attachedFiles, setAttachedFiles] = useState<string[]>([])
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([])
-  const [documentContext, setDocumentContext] = useState<string>('')
   const [showVoiceError, setShowVoiceError] = useState(false)
-  const [showFileMenu, setShowFileMenu] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const imageInputRef = useRef<HTMLInputElement>(null)
   
   const { activeConversation, addMessage, createNewChat } = useChat()
 
@@ -82,16 +77,6 @@ export function AIZonePage() {
     }
   }
 
-  const addFile = (fileName: string) => {
-    if (attachedFiles.length < 2) {
-      setAttachedFiles([...attachedFiles, fileName])
-    }
-  }
-
-  const removeFile = (index: number) => {
-    setAttachedFiles(attachedFiles.filter((_, i) => i !== index))
-  }
-
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
     const maxSize = 10 * 1024 * 1024 // 10MB
@@ -116,7 +101,6 @@ export function AIZonePage() {
 
   const handleRemoveFile = (index: number) => {
     setUploadedFiles(uploadedFiles.filter((_, i) => i !== index))
-    setDocumentContext('') // Clear document context when files are removed
   }
 
   const handleFilePickerClick = () => {
@@ -175,16 +159,6 @@ export function AIZonePage() {
         setAuthToken(token)
       }
 
-      // If files are attached, show sending animation
-      if (filesToSend.length > 0) {
-        console.log('[AIZonePage.handleSubmit] Adding sending animation message')
-        // Add "Sending documents..." placeholder message
-        addMessage({
-          role: 'system',
-          content: `📤 Sending ${filesToSend.length} document${filesToSend.length > 1 ? 's' : ''}...`
-        })
-      }
-
       // Send message with files if available
       console.log('[AIZonePage.handleSubmit] Calling API with files:', filesToSend.length)
       const res = await api.ai.chat(userMessage, { files: filesToSend })
@@ -201,16 +175,6 @@ export function AIZonePage() {
         usedDocuments: filesToSend.length > 0
       }
       
-      // If documents were sent, add confirmation message
-      if (filesToSend.length > 0) {
-        const docNames = filesToSend.map(f => f.name).join(', ')
-        console.log('[AIZonePage.handleSubmit] Adding document confirmation:', docNames)
-        addMessage({
-          role: 'system',
-          content: `✅ Documents processed: ${docNames}`
-        })
-      }
-      
       // Store the complete response as JSON string so ChatMessage can parse and render it
       const responseContent = JSON.stringify(enrichedResponseData)
       console.log('[AIZonePage.handleSubmit] Adding AI response message')
@@ -223,7 +187,6 @@ export function AIZonePage() {
 
       // Clear uploaded files only after successful submission
       setUploadedFiles([])
-      setDocumentContext('')
       
     } catch (err: any) {
       console.error('Error:', err)
@@ -397,24 +360,6 @@ export function AIZonePage() {
                         {uploadedFiles.length > 0 && (
                           <div className="mb-2">
                             <FilePreview files={uploadedFiles} onRemove={handleRemoveFile} />
-                          </div>
-                        )}
-
-                        {/* Legacy Attached Files Preview - kept for compatibility */}
-                        {attachedFiles.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mb-2">
-                            {attachedFiles.map((file, index) => (
-                              <div key={index} className="inline-flex items-center bg-slate-700 rounded-full px-2 py-1 text-xs text-slate-300">
-                                <FileText className="w-3 h-3 mr-1" />
-                                <span className="truncate max-w-20">{file.split('.')[0]}</span>
-                                <button
-                                  onClick={() => removeFile(index)}
-                                  className="ml-1 text-slate-400 hover:text-red-400"
-                                >
-                                  <X className="w-3 h-3" />
-                                </button>
-                              </div>
-                            ))}
                           </div>
                         )}
                         

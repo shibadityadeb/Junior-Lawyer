@@ -1,17 +1,17 @@
 import { useState, useEffect, useRef } from 'react'
 import { FlowchartRenderer } from './FlowchartRenderer'
-import { detectIncidentType, getThemeByIncidentType } from '@/utils/flowchartThemes'
+import { detectIncidentType, getThemeByIncidentType, type IncidentType } from '@/utils/flowchartThemes'
 import { parseResponseIntoBlocks, Block } from '@/utils/responseParser'
 import { useTextToSpeech } from '@/hooks/useTextToSpeech'
 
 export interface AIResponseData {
-  matterSummary: string
-  incidentType: string
-  clarifyingQuestions: string[]
-  conditionalGuidance: string
-  legalPathways: string[]
-  flowchart: string
-  disclaimer: string
+  matterSummary?: string
+  incidentType?: IncidentType
+  clarifyingQuestions?: string[]
+  conditionalGuidance?: string
+  legalPathways?: string[]
+  flowchart?: string
+  disclaimer?: string
   userMessage?: string
   // Legacy fields for backward compatibility
   summary?: string
@@ -158,7 +158,7 @@ function AIResponseRenderer({ data }: { data: AIResponseData }) {
   })
 
   // Use incident type from response if available (new format), else detect from user message
-  const incidentType = data.incidentType || (data.userMessage ? detectIncidentType(data.userMessage) : 'general')
+  const incidentType: IncidentType = (data.incidentType as IncidentType) || (data.userMessage ? detectIncidentType(data.userMessage) : 'general')
   const theme = getThemeByIncidentType(incidentType)
 
   // Build combined text content to parse into blocks

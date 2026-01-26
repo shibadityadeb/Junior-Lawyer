@@ -76,7 +76,7 @@ export const authMiddleware = async (
     res.status(500).json({
       success: false,
       message: 'Internal server error during authentication',
-      error: 'INTERNAL_ERROR',
+      error: 'INTERNAL_AUTH_ERROR',
     });
   }
 };

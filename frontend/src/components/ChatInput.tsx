@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect, useContext } from 'react'
-import { ChatContext } from '@/context/ChatContext'
+import { useState, useRef, useEffect } from 'react'
+import { useChat } from '@/context/ChatContext'
 import { useSpeechToText } from '@/hooks/useSpeechToText'
 
 /**
@@ -7,7 +7,8 @@ import { useSpeechToText } from '@/hooks/useSpeechToText'
  * Allows users to type or speak their message
  */
 export function ChatInput() {
-  const { sendMessage, isLoading } = useContext(ChatContext)
+  const { addMessage } = useChat()
+  const [isLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [showVoiceError, setShowVoiceError] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -61,8 +62,11 @@ export function ChatInput() {
     // Don't send while loading
     if (isLoading) return
 
-    // Send message
-    sendMessage(message)
+    // Add message to chat
+    addMessage({
+      role: 'user',
+      content: message
+    })
     setMessage('')
 
     // Focus input after sending

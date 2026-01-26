@@ -1,21 +1,15 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { useAuth } from '@clerk/clerk-react'
-import { loadConversations, saveConversations } from '@/utils/chatStorage'
+import { loadConversations, saveConversations, type StoredConversation } from '@/utils/chatStorage'
 
 export interface Message {
   id: string
-  role: 'user' | 'assistant' | 'system'
+  role: 'user' | 'assistant'
   content: string
   timestamp: number // milliseconds since epoch
 }
 
-export interface Conversation {
-  id: string
-  title: string
-  messages: Message[]
-  createdAt: number // milliseconds since epoch
-  updatedAt: number // milliseconds since epoch
-}
+export type Conversation = StoredConversation
 
 interface ChatContextType {
   conversations: Conversation[]
@@ -28,6 +22,8 @@ interface ChatContextType {
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined)
+
+export { ChatContext }
 
 function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).substr(2)

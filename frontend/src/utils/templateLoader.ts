@@ -24,6 +24,9 @@ export interface Template {
   icon: React.ComponentType<{ className?: string }>
   categorySlug: string
   slug: string
+  category?: string
+  preview?: string
+  downloadUrl?: string
 }
 
 // This maps the actual folder structure to categories
@@ -408,9 +411,21 @@ export function getTemplateBySlug(categorySlug: string, templateSlug: string) {
   
   if (!template) return null
   
-  // Return template with download URL
+  // Find the category metadata to get folder path
+  const categoryKey = Object.keys(TEMPLATE_CATEGORIES).find((key) => key === categorySlug)
+  
+  if (!categoryKey) return null
+  
+  const categoryMeta = TEMPLATE_CATEGORIES[categoryKey as keyof typeof TEMPLATE_CATEGORIES]
+  
+  // Construct the download URL using the dist folder structure
+  const fileUrl = `/dist/${categoryMeta.folder}/${template.title}.docx`
+  
+  // Return template with all required fields
   return {
     ...template,
-    downloadUrl: '', // Will be set based on the actual file path
+    category: categoryMeta.title,
+    preview: `${template.title}\n\n${template.description}\n\nThis is a preview of the ${categoryMeta.title} template.`,
+    downloadUrl: fileUrl,
   }
 }
