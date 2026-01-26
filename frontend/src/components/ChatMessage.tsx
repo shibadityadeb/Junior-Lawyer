@@ -158,7 +158,7 @@ function AIResponseRenderer({ data }: { data: AIResponseData }) {
   })
 
   // Use incident type from response if available (new format), else detect from user message
-  const incidentType: IncidentType = (data.incidentType as IncidentType) || (data.userMessage ? detectIncidentType(data.userMessage) : 'general')
+  const incidentType: IncidentType = data.incidentType ? (data.incidentType as IncidentType) : (data.userMessage ? detectIncidentType(data.userMessage) : 'general')
   const theme = getThemeByIncidentType(incidentType)
 
   // Build combined text content to parse into blocks
@@ -315,7 +315,7 @@ function AIResponseRenderer({ data }: { data: AIResponseData }) {
           <div className="w-full bg-slate-950/60 rounded-lg p-4 border border-slate-700/50 overflow-x-auto">
             <FlowchartRenderer 
               mermaidCode={data.flowchart}
-              themeType={incidentType}
+              themeType={incidentType as IncidentType}
             />
           </div>
         </div>
