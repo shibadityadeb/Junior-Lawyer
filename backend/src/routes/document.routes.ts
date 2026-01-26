@@ -12,18 +12,6 @@ import {
 
 const router = Router()
 
-// Apply CORS headers to all document routes
-router.use((req: Request, res: Response, next) => {
-  res.header('Access-Control-Allow-Origin', '*')
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization')
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-  
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200)
-  }
-  next()
-})
-
 // Configure multer for temporary file storage
 const upload = multer({
   storage: multer.diskStorage({

@@ -39,7 +39,11 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
 // CORS middleware - Configure for your production domain
 const allowedOrigins = process.env.NODE_ENV === 'production' 
-  ? (process.env.ALLOWED_ORIGINS || '').split(',').map(o => o.trim()).filter(Boolean)
+  ? [
+      'https://junior-lawyer-git-main-shibadityadeb-adypueduins-projects.vercel.app',
+      'https://junior-lawyer.vercel.app',
+      ...(process.env.ALLOWED_ORIGINS || '').split(',').map(o => o.trim()).filter(Boolean)
+    ]
   : ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:3001'];
 
 app.use((req: Request, res: Response, next: NextFunction) => {
@@ -47,7 +51,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   
   // Allow origins in whitelist
   if (process.env.NODE_ENV === 'production') {
-    if (allowedOrigins.includes(origin)) {
+    if (origin && allowedOrigins.includes(origin)) {
       res.header('Access-Control-Allow-Origin', origin);
     }
   } else {
