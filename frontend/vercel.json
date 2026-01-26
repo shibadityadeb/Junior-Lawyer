@@ -1,7 +1,6 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "envPrefix": "VITE_",
   "env": {
     "VITE_API_BASE_URL": "https://junior-lawyer.onrender.com",
     "VITE_CLERK_PUBLISHABLE_KEY": "pk_test_Z29sZGVuLWh5ZW5hLTUuY2xlcmsuYWNjb3VudHMuZGV2JA"
