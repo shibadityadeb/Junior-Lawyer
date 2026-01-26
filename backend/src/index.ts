@@ -12,9 +12,9 @@ const server = app.listen(PORT, () => {
 ╔══════════════════════════════════════════════╗
 ║   Legal AI Assistant Backend Server Started  ║
 ╠══════════════════════════════════════════════╣
-║ Server running at: http://localhost:${PORT}         ║
-║ Environment: ${process.env.NODE_ENV || 'development'}                     ║
-║ Health Check: http://localhost:${PORT}/api/health  ║
+║ Server running on port: ${PORT}                    ║
+║ Environment: ${process.env.NODE_ENV || 'production'}                     ║
+║ Health Check: GET /api/health                ║
 ╚══════════════════════════════════════════════╝
   `);
 });
