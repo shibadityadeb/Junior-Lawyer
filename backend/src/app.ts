@@ -40,6 +40,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 // CORS middleware - Configure for your production domain
 const allowedOrigins = process.env.NODE_ENV === 'production' 
   ? [
+      'https://junior-lawyer-rekk8opb4-shibadityadeb-adypueduins-projects.vercel.app',
       'https://junior-lawyer-git-main-shibadityadeb-adypueduins-projects.vercel.app',
       'https://junior-lawyer.vercel.app',
       ...(process.env.ALLOWED_ORIGINS || '').split(',').map(o => o.trim()).filter(Boolean)
