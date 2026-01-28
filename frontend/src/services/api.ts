@@ -25,7 +25,7 @@ console.log('[API] Initialized with base URL:', API_BASE_URL)
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 35000, // 35 seconds to allow Claude API time to respond
+  timeout: 60000, // 60 seconds to allow Claude API time to respond
   headers: {
     'Content-Type': 'application/json',
   },

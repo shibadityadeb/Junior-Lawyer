@@ -208,7 +208,7 @@ export class AnthropicService {
 
         const response = await this.client.messages.create({
           model: 'claude-3-5-haiku-20241022',
-          max_tokens: 700,
+          max_tokens: 1500,
           temperature: 0.3,
           system: systemPrompt,
           messages: [
@@ -217,6 +217,8 @@ export class AnthropicService {
               content: userContent,
             },
           ],
+        }, {
+          timeout: 45000, // 45 second timeout for Anthropic API
         });
 
         console.log('✅ Claude API response received');
