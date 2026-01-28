@@ -112,20 +112,11 @@ Flowchart MUST:
 - Use clear, concise node labels
 - Flow from incident → key factors → legal pathway → outcome
 
-Example:
-\`\`\`
+Example flowchart structure (use this format):
 flowchart TD
-  A["Workplace Harassment Incident"] --> B{Type of Harassment?}
-  B -->|Sexual| C["Report to HR/Internal Complaints Committee"]
-  B -->|Other| D["Document incidents with dates"]
-  C --> E["Investigation Process"]
-  D --> E
-  E --> F{Evidence Sufficient?}
-  F -->|Yes| G["File complaint with Labour Authority"]
-  F -->|No| H["Gather more documentation"]
-  H --> E
-  G --> I["Legal proceedings initiated"]
-\`\`\`
+  A["Incident"] --> B{Key Decision?}
+  B -->|Option1| C["Action 1"]
+  B -->|Option2| D["Action 2"]
 
 ===== CRITICAL: RESPONSE FORMAT (MANDATORY) =====
 
@@ -133,8 +124,9 @@ Return ONLY valid JSON. Return nothing else.
 - Do NOT include any text before the JSON.
 - Do NOT include any text after the JSON.
 - Do NOT wrap JSON in markdown code blocks.
-- Do NOT include backticks anywhere.
+- Do NOT include triple backticks anywhere.
 - Return raw JSON object only.
+- For the flowchart field, use literal newline characters (not escaped \\n).
 
 Return exactly this structure:
 {
@@ -143,7 +135,7 @@ Return exactly this structure:
   "clarifyingQuestions": ["Question 1 for missing facts?", "Question 2?", "Question 3?"],
   "conditionalGuidance": "Guidance marked as conditional: 'Based on the information available so far…' Explicit assumptions. Step-by-step actions.",
   "legalPathways": ["Option 1: Brief description", "Option 2: Brief description"],
-  "flowchart": "flowchart TD\\n  A[...] --> B[...]\\n  ...",
+  "flowchart": "flowchart TD\n  A[Your Matter] --> B{Decision Point}\n  B -->|Yes| C[Path 1]\n  B -->|No| D[Path 2]",
   "disclaimer": "Subtle disclaimer mentioning general information vs legal advice"
 }
 
@@ -365,28 +357,59 @@ export class AnthropicService {
         const parsed = JSON.parse(jsonString);
         console.log('✅ JSON parsed successfully (original)');
         return parsed as AIResponse;
-      } catch (firstError) {
-        console.log('⚠️ First parse attempt failed, trying fixes...');
+      } catch (firstError: any) {
+        console.log('⚠️ First parse attempt failed:', firstError.message);
+        console.log('⚠️ Trying JSON fixes...');
         
         // Try to fix common JSON issues
         let fixedJson = jsonString
           .replace(/,\s*}/g, '}')  // Remove trailing commas before }
-          .replace(/,\s*]/g, ']'); // Remove trailing commas before ]
+          .replace(/,\s*]/g, ']') // Remove trailing commas before ]
+          // Fix unescaped newlines in string values (common with flowcharts)
+          .replace(/"flowchart":\s*"([^"]*)"/g, (match, flowchartContent) => {
+            // Properly escape newlines within the flowchart string
+            const escaped = flowchartContent
+              .replace(/\r?\n/g, '\\n')
+              .replace(/\t/g, '\\t');
+            return `"flowchart":"${escaped}"`;
+          });
         
         try {
           const parsed = JSON.parse(fixedJson);
-          console.log('✅ JSON parsed successfully (after comma fixes)');
+          console.log('✅ JSON parsed successfully (after fixes)');
           return parsed as AIResponse;
-        } catch (secondError) {
-          // Re-throw with first error message as it's likely more relevant
-          throw firstError;
+        } catch (secondError: any) {
+          console.log('⚠️ Second parse attempt failed:', secondError.message);
+          
+          // Last resort: try to manually extract and reconstruct
+          try {
+            // More aggressive fix for newlines in all string values
+            const aggressiveFixed = jsonString.replace(
+              /"([^"\\]*(\\.[^"\\]*)*)"/g,
+              (match) => {
+                // Only fix if it contains actual newlines
+                if (match.includes('\n') || match.includes('\r')) {
+                  return match
+                    .replace(/\r?\n/g, '\\n')
+                    .replace(/\t/g, '\\t');
+                }
+                return match;
+              }
+            );
+            const parsed = JSON.parse(aggressiveFixed);
+            console.log('✅ JSON parsed successfully (after aggressive fixes)');
+            return parsed as AIResponse;
+          } catch {
+            // Re-throw original error
+            throw firstError;
+          }
         }
       }
     } catch (parseError) {
       const errorMsg = parseError instanceof Error ? parseError.message : 'Unknown parse error';
       console.error('❌ JSON parse error:', errorMsg);
-      console.error('❌ Attempted to parse:', jsonString.substring(0, 300));
-      throw new Error(`JSON parsing failed: ${errorMsg}. Response preview: ${jsonString.substring(0, 100)}`);
+      console.error('❌ Attempted to parse (first 500 chars):', jsonString.substring(0, 500));
+      throw new Error(`JSON parsing failed: ${errorMsg}`);
     }
   }
 
