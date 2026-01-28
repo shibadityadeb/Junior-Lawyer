@@ -360,24 +360,27 @@ export class AnthropicService {
     }
 
     try {
-      // Try to fix common JSON issues before parsing
-      let fixedJson = jsonString
-        .replace(/,\s*}/g, '}')  // Remove trailing commas before }
-        .replace(/,\s*]/g, ']')  // Remove trailing commas before ]
-        .replace(/\n/g, '\\n')   // Escape newlines in strings
-        .replace(/\r/g, '\\r')   // Escape carriage returns
-        .replace(/\t/g, '\\t');  // Escape tabs
-      
-      // But first try original string (the fixes above might break valid JSON)
+      // First try parsing the original JSON string
       try {
         const parsed = JSON.parse(jsonString);
         console.log('✅ JSON parsed successfully (original)');
         return parsed as AIResponse;
-      } catch {
-        // Try with fixes
-        const parsed = JSON.parse(fixedJson);
-        console.log('✅ JSON parsed successfully (after fixes)');
-        return parsed as AIResponse;
+      } catch (firstError) {
+        console.log('⚠️ First parse attempt failed, trying fixes...');
+        
+        // Try to fix common JSON issues
+        let fixedJson = jsonString
+          .replace(/,\s*}/g, '}')  // Remove trailing commas before }
+          .replace(/,\s*]/g, ']'); // Remove trailing commas before ]
+        
+        try {
+          const parsed = JSON.parse(fixedJson);
+          console.log('✅ JSON parsed successfully (after comma fixes)');
+          return parsed as AIResponse;
+        } catch (secondError) {
+          // Re-throw with first error message as it's likely more relevant
+          throw firstError;
+        }
       }
     } catch (parseError) {
       const errorMsg = parseError instanceof Error ? parseError.message : 'Unknown parse error';
