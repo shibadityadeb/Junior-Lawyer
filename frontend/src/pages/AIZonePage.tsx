@@ -198,6 +198,18 @@ export function AIZonePage() {
         return
       }
       
+      // Handle 502 Bad Gateway (AI service issues)
+      if (err.response?.status === 502) {
+        setError(err.response?.data?.message || 'AI service is temporarily unavailable. Please try again in a moment.')
+        return
+      }
+
+      // Handle 500 Internal Server Error
+      if (err.response?.status === 500) {
+        setError(err.response?.data?.message || 'Server error occurred. Please try again.')
+        return
+      }
+
       // Handle network errors
       if (err.message === 'Network Error' || !err.response) {
         setError('Network error: Unable to connect to AI service. Please check your connection and try again.')

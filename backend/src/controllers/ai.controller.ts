@@ -80,23 +80,45 @@ export const chatWithAI = async (
       },
       message: 'Legal question processed successfully',
     });
-  } catch (error) {
-    console.error('❌ Error in chatWithAI:', error);
+  } catch (error: any) {
+    console.error('❌ Error in chatWithAI:', error?.message || error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
-    // Check if API key is missing (500)
-    if (errorMessage.includes('ANTHROPIC_API_KEY')) {
-      console.error('🔴 Claude API key is not configured');
+    // Check if API key is invalid or missing (500)
+    if (errorMessage.includes('ANTHROPIC_API_KEY') || errorMessage.includes('invalid') && errorMessage.includes('API')) {
+      console.error('🔴 Claude API key issue:', errorMessage);
       res.status(500).json({
         success: false,
         message: 'AI service is not properly configured. Please contact support.',
-        error: 'MISSING_API_KEY',
+        error: 'API_KEY_ERROR',
+      });
+      return;
+    }
+
+    // Check if authentication failed with Anthropic
+    if (error?.status === 401 || errorMessage.includes('401')) {
+      console.error('🔴 Anthropic authentication failed');
+      res.status(500).json({
+        success: false,
+        message: 'AI service authentication failed. Please contact support.',
+        error: 'AUTH_ERROR',
+      });
+      return;
+    }
+
+    // Check if rate limited by Anthropic
+    if (error?.status === 429 || errorMessage.includes('rate limit')) {
+      console.error('🔴 Anthropic rate limit exceeded');
+      res.status(429).json({
+        success: false,
+        message: 'AI service is temporarily rate limited. Please try again in a moment.',
+        error: 'RATE_LIMITED',
       });
       return;
     }
 
     // Check if Claude API failed (502 - Bad Gateway)
-    if (errorMessage.includes('Claude API failed')) {
+    if (errorMessage.includes('Claude API failed') || errorMessage.includes('timeout')) {
       console.error('🔴 Claude API call failed after retries');
       res.status(502).json({
         success: false,
@@ -106,13 +128,13 @@ export const chatWithAI = async (
       return;
     }
 
-    // Check if response validation failed (502)
-    if (errorMessage.includes('Response validation failed')) {
-      console.error('🔴 Claude response validation failed');
+    // Check if JSON parsing failed
+    if (errorMessage.includes('JSON') || errorMessage.includes('parse')) {
+      console.error('🔴 Claude response parsing failed');
       res.status(502).json({
         success: false,
-        message: 'AI service returned invalid response. Please try again.',
-        error: 'INVALID_RESPONSE',
+        message: 'AI service returned malformed response. Please try again.',
+        error: 'PARSE_ERROR',
       });
       return;
     }
@@ -120,8 +142,8 @@ export const chatWithAI = async (
     // Generic error response
     res.status(500).json({
       success: false,
-      message: 'Error processing chat request',
-      error: errorMessage,
+      message: 'Error processing chat request. Please try again.',
+      error: process.env.NODE_ENV === 'development' ? errorMessage : 'INTERNAL_ERROR',
     });
   } finally {
     // Cleanup temporary files
