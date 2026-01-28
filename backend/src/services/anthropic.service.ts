@@ -178,7 +178,10 @@ export class AnthropicService {
       throw new Error(errorMsg);
     }
     console.log('✅ Anthropic API key verified at service initialization');
-    this.client = new Anthropic({ apiKey });
+    this.client = new Anthropic({ 
+      apiKey,
+      timeout: 45000, // 45 second timeout for API calls
+    });
   }
 
   /**
@@ -217,8 +220,6 @@ export class AnthropicService {
               content: userContent,
             },
           ],
-        }, {
-          timeout: 45000, // 45 second timeout for Anthropic API
         });
 
         console.log('✅ Claude API response received');
