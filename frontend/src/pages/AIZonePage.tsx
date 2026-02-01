@@ -339,11 +339,18 @@ export function AIZonePage() {
               <div className="relative">
                 {/* Input Container */}
                 <div className="bg-slate-800 border border-slate-700 rounded-2xl shadow-lg focus-within:border-orange-500 transition-all duration-200">
+                  {/* File Preview - Inside Container */}
+                  {uploadedFiles.length > 0 && (
+                    <div className="px-4 pt-3 pb-2 border-b border-slate-700/50">
+                      <FilePreview files={uploadedFiles} onRemove={handleRemoveFile} />
+                    </div>
+                  )}
+                  
                   {/* Main Input Area */}
                   <form onSubmit={handleSubmit} className="relative">
                     <div className="flex items-end p-4 space-x-3">
                       {/* Left Controls */}
-                      <div className="relative flex items-center space-x-2">
+                      <div className="flex items-center space-x-2">
                         <button
                           type="button"
                           onClick={handleFilePickerClick}
@@ -357,16 +364,6 @@ export function AIZonePage() {
                         >
                           <Plus className="w-5 h-5" />
                         </button>
-                        
-                        {/* File count indicator */}
-                        {uploadedFiles.length > 0 && (
-                          <div className="absolute left-0 -bottom-7 text-xs text-orange-400 font-medium flex items-center gap-1">
-                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M8 4a3 3 0 00-3 3v4a5 5 0 0010 0V7a1 1 0 112 0v4a7 7 0 11-14 0V7a5 5 0 0110 0v4a3 3 0 11-6 0V7a1 1 0 012 0v4a1 1 0 102 0V7a3 3 0 00-3-3z" clipRule="evenodd" />
-                            </svg>
-                            {uploadedFiles.length} attached
-                          </div>
-                        )}
                       </div>
 
                       {/* Center Textarea */}
@@ -380,13 +377,6 @@ export function AIZonePage() {
                           onChange={handleFileSelect}
                           style={{ display: 'none' }}
                         />
-
-                        {/* File Preview Chips */}
-                        {uploadedFiles.length > 0 && (
-                          <div className="mb-3">
-                            <FilePreview files={uploadedFiles} onRemove={handleRemoveFile} />
-                          </div>
-                        )}
                         
                         <textarea
                           value={input}
