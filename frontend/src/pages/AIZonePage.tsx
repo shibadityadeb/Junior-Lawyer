@@ -341,27 +341,30 @@ export function AIZonePage() {
                 <div className="bg-slate-800 border border-slate-700 rounded-2xl shadow-lg focus-within:border-orange-500 transition-all duration-200">
                   {/* Main Input Area */}
                   <form onSubmit={handleSubmit} className="relative">
-                    <div className="flex items-end p-3 space-x-3">
+                    <div className="flex items-end p-4 space-x-3">
                       {/* Left Controls */}
                       <div className="relative flex items-center space-x-2">
                         <button
                           type="button"
                           onClick={handleFilePickerClick}
                           className={cn(
-                            "w-8 h-8 rounded-full flex items-center justify-center transition-colors border",
+                            "w-9 h-9 rounded-lg flex items-center justify-center transition-all duration-200 border shadow-sm",
                             uploadedFiles.length > 0
-                              ? "bg-orange-500 text-white border-orange-500" 
-                              : "text-slate-300 hover:text-white hover:bg-slate-700 border-slate-600"
+                              ? "bg-orange-500 text-white border-orange-400 hover:bg-orange-600 hover:shadow-md hover:shadow-orange-500/20" 
+                              : "text-slate-300 hover:text-white hover:bg-slate-700 border-slate-600 hover:border-slate-500"
                           )}
                           title="Attach files (PDF, images, documents)"
                         >
-                          <Plus className="w-4 h-4" />
+                          <Plus className="w-5 h-5" />
                         </button>
                         
                         {/* File count indicator */}
                         {uploadedFiles.length > 0 && (
-                          <div className="absolute left-0 -bottom-6 text-xs text-slate-300 font-medium">
-                            {uploadedFiles.length} file{uploadedFiles.length !== 1 ? 's' : ''} selected
+                          <div className="absolute left-0 -bottom-7 text-xs text-orange-400 font-medium flex items-center gap-1">
+                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M8 4a3 3 0 00-3 3v4a5 5 0 0010 0V7a1 1 0 112 0v4a7 7 0 11-14 0V7a5 5 0 0110 0v4a3 3 0 11-6 0V7a1 1 0 012 0v4a1 1 0 102 0V7a3 3 0 00-3-3z" clipRule="evenodd" />
+                            </svg>
+                            {uploadedFiles.length} attached
                           </div>
                         )}
                       </div>
@@ -380,7 +383,7 @@ export function AIZonePage() {
 
                         {/* File Preview Chips */}
                         {uploadedFiles.length > 0 && (
-                          <div className="mb-2">
+                          <div className="mb-3">
                             <FilePreview files={uploadedFiles} onRemove={handleRemoveFile} />
                           </div>
                         )}
@@ -389,12 +392,12 @@ export function AIZonePage() {
                           value={input}
                           onChange={(e) => setInput(e.target.value)}
                           placeholder="AskJunior — your all-time legal assistant"
-                          className="w-full bg-transparent text-white placeholder-slate-400 focus:outline-none resize-none min-h-[24px] max-h-[120px] text-sm leading-6"
+                          className="w-full bg-transparent text-white placeholder-slate-400 focus:outline-none resize-none min-h-[28px] max-h-[120px] text-[15px] leading-6"
                           rows={1}
                           disabled={loading}
                           style={{
                             height: 'auto',
-                            minHeight: '24px'
+                            minHeight: '28px'
                           }}
                           onInput={(e) => {
                             const target = e.target as HTMLTextAreaElement
@@ -417,32 +420,32 @@ export function AIZonePage() {
                           onClick={handleMicClick}
                           disabled={loading || !isSTTSupported}
                           className={cn(
-                            "w-8 h-8 rounded-full flex items-center justify-center transition-colors",
+                            "w-9 h-9 rounded-lg flex items-center justify-center transition-all duration-200",
                             isListening
-                              ? "bg-red-600 text-white"
+                              ? "bg-red-600 text-white shadow-lg shadow-red-600/30 hover:bg-red-700"
                               : isSTTSupported
                                 ? "text-slate-400 hover:text-white hover:bg-slate-700"
                                 : "text-slate-600 cursor-not-allowed"
                           )}
                           title={isSTTSupported ? (isListening ? 'Listening… Click to stop' : 'Click to speak') : 'Voice not supported'}
                         >
-                          <Mic className={cn("w-4 h-4", isListening && "animate-pulse")} />
+                          <Mic className={cn("w-5 h-5", isListening && "animate-pulse")} />
                         </button>
                         
                         <button
                           type="submit"
                           disabled={!input.trim() || loading}
                           className={cn(
-                            "w-8 h-8 rounded-full flex items-center justify-center transition-colors",
+                            "w-9 h-9 rounded-lg flex items-center justify-center transition-all duration-200 shadow-sm",
                             input.trim() && !loading
-                              ? "bg-orange-500 hover:bg-orange-600 text-white"
-                              : "bg-slate-600 text-slate-400 cursor-not-allowed"
+                              ? "bg-orange-500 hover:bg-orange-600 text-white hover:shadow-md hover:shadow-orange-500/30"
+                              : "bg-slate-700 text-slate-400 cursor-not-allowed"
                           )}
                         >
                           {loading ? (
-                            <Loader className="w-4 h-4 animate-spin" />
+                            <Loader className="w-5 h-5 animate-spin" />
                           ) : (
-                            <Send className="w-4 h-4" />
+                            <Send className="w-5 h-5" />
                           )}
                         </button>
                       </div>

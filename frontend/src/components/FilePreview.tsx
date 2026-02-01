@@ -29,25 +29,29 @@ export function FilePreview({ files, onRemove }: FilePreviewProps) {
   }
 
   return (
-    <div className="px-4 py-2 mb-2">
+    <div className="space-y-2">
       <div className="flex flex-wrap gap-2">
         {files.map((file, index) => (
           <div
             key={index}
-            className="inline-flex items-center bg-slate-700/50 border border-slate-600 rounded-full px-3 py-1 text-xs text-slate-300 hover:bg-slate-700 transition-colors"
+            className="group inline-flex items-center bg-gradient-to-br from-slate-700/60 to-slate-800/60 border border-slate-600/50 rounded-xl px-3.5 py-2 text-xs text-slate-200 hover:border-slate-500 hover:shadow-md transition-all duration-200 backdrop-blur-sm"
           >
-            {getFileIcon(file)}
-            <span className="ml-2 truncate max-w-[150px]" title={file.name}>
-              {file.name}
-            </span>
-            <span className="ml-2 text-slate-500">({formatFileSize(file.size)})</span>
+            <div className="flex items-center justify-center w-6 h-6 rounded-lg bg-slate-700/50 text-slate-300 mr-2.5 group-hover:bg-slate-600/50 transition-colors">
+              {getFileIcon(file)}
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="truncate max-w-[160px] font-medium text-slate-100" title={file.name}>
+                {file.name}
+              </span>
+              <span className="text-[10px] text-slate-400">{formatFileSize(file.size)}</span>
+            </div>
             <button
               onClick={() => onRemove(index)}
-              className="ml-2 text-slate-400 hover:text-red-400 transition-colors"
+              className="ml-3 flex items-center justify-center w-5 h-5 rounded-md text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all duration-150"
               type="button"
               aria-label={`Remove ${file.name}`}
             >
-              <X className="w-3 h-3" />
+              <X className="w-3.5 h-3.5" />
             </button>
           </div>
         ))}
